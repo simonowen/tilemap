@@ -1,0 +1,11 @@
+TODO:
+
+- add seamless mode to more games
+- finish adding unreleased games
+- finish making game system independent
+- finish making CPU core independent
+- use libspectrum for wider snapshot support
+- fix audio device disappearance, change to use XAudio2?
+- support memory contention to fix audio pitch in some games
+- consider porting to other platforms?
+- improve error handling detail

@@ -1,0 +1,11 @@
+/.vs
+/*.aps
+/*.vcxproj.user
+/Debug
+/Release
+/x64
+/build
+/*_VS.h
+/*_PS.h
+/*.sna
+/48.rom
