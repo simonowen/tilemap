@@ -16,6 +16,5 @@ private:
 
 	static constexpr int START_ROOM_ADDR = 0x87eb;
 
-	bool m_seamless = true;
 	std::vector<uint8_t> m_entity_data;
 };
