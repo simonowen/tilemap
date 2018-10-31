@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Game.h"
-#include "Z80.h"
 
 constexpr unsigned SPECTRUM_SCREEN_BYTES = 6912;
 constexpr int SPECTRUM_WIDTH_PIXELS = 256;
