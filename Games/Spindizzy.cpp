@@ -81,12 +81,8 @@ static const uint8_t spindizzy_map[][5] =
 void SD_Game::InstallHooks(std::vector<uint8_t> &mem)
 {
 	// Starting game from menu
-	Hook(mem, 0xc7c0, 0xcd, [&](Tile &tile)
+	Hook(mem, 0xc7c0, 0xcd /*CALL nn*/, [&](Tile &tile)
 	{
-		// CALL nn
-		Z80_PC(tile) += 3;
-		Call(tile, tile.DPeek(Z80_PC(tile) - 2));
-
 		if (IsActiveTile(tile))
 		{
 			BlankScreen(tile);
@@ -98,13 +94,11 @@ void SD_Game::InstallHooks(std::vector<uint8_t> &mem)
 	});
 
 	// Entering room
-	Hook(mem, 0xccb4, 0xed, [&](Tile &tile)
+	Hook(mem, 0xccb4, 0xed /*LD DE,(nn)*/, [&](Tile &tile)
 	{
-		// LD DE,(nn)
-		Z80_PC(tile) += 4;
 		auto room_addr = tile.DPeek(Z80_PC(tile) - 2);
-
 		auto new_room = tile.DPeek(room_addr);
+
 		if (IsActiveTile(tile) && new_room != tile.room)
 		{
 			auto &tile_new = FindRoomTile(new_room);
@@ -131,10 +125,8 @@ void SD_Game::InstallHooks(std::vector<uint8_t> &mem)
 	});
 
 	// Room drawing complete
-	Hook(mem, 0xb969, 0xc9, [&](Tile &tile)
+	Hook(mem, 0xb969, 0xc9 /*RET*/, [&](Tile &tile)
 	{
-		Ret(tile);
-
 		if (!IsActiveTile(tile))
 		{
 			auto tile_x = (tile.room >> 8) - MAP_BASE_X;
@@ -154,12 +146,10 @@ void SD_Game::InstallHooks(std::vector<uint8_t> &mem)
 	});
 
 	// Hide bottom-right indicator in inactive rooms (or if blue)
-	Hook(mem, 0xb9bb, 0x3c, [&](Tile &tile)
+	Hook(mem, 0xb9bb, 0x3c /*INC A*/, [&](Tile &tile)
 	{
-		Z80_PC(tile) += 1;
-
-		if (IsActiveTile(tile) && Z80_A(tile) != 0)
-			Z80_A(tile)++;
+		if (!IsActiveTile(tile) || Z80_A(tile) == 1)
+			Z80_A(tile) = 0;
 	});
 }
 

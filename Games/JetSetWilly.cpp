@@ -31,11 +31,8 @@ JSW_Game::JSW_Game(std::shared_ptr<TileView> pTileView, bool cheat_pokes)
 void JSW_Game::InstallHooks(std::vector<uint8_t> &mem)
 {
 	// Start of game
-	Hook(mem, 0x8905, 0xed, [&](Tile &tile)
+	Hook(mem, 0x88fc, 0x21 /*LD HL,nn*/, [&](Tile &tile)
 	{
-		// LDIR (ignored)
-		Z80_PC(tile) += 2;
-
 		if (IsActiveTile(tile))
 		{
 			BlankScreen(tile);
@@ -47,13 +44,11 @@ void JSW_Game::InstallHooks(std::vector<uint8_t> &mem)
 	});
 
 	// Room change start
-	Hook(mem, 0x8912, 0x3a, [&](Tile &tile)
+	Hook(mem, 0x8912, 0x3a /*LD A,(nn)*/, [&](Tile &tile)
 	{
-		// LD A,(nn)
-		Z80_PC(tile) += 3;
 		auto room_addr = tile.DPeek(Z80_PC(tile) - 2);
+		auto new_room = Z80_A(tile);
 
-		auto new_room = tile.mem[room_addr];
 		if (IsActiveTile(tile) && new_room != tile.room)
 		{
 			auto &tile_new = FindRoomTile(new_room);
@@ -78,11 +73,8 @@ void JSW_Game::InstallHooks(std::vector<uint8_t> &mem)
 	});
 
 	// Room init (after entity initialisation)
-	Hook(mem, 0x8988, 0xc3, [&](Tile &tile)
+	Hook(mem, 0x8988, 0xc3 /*JP nn*/, [&](Tile &tile)
 	{
-		// JP nn
-		Z80_PC(tile) = tile.DPeek(Z80_PC(tile) + 1);
-
 		if (IsActiveTile(tile) && !m_entity_data.empty())
 		{
 			std::copy(m_entity_data.begin(), m_entity_data.end(), tile.mem.begin() + 0x8100);
@@ -97,33 +89,21 @@ void JSW_Game::InstallHooks(std::vector<uint8_t> &mem)
 	});
 
 	// Room drawing complete
-	Hook(mem, 0x8a3a, 0xcd, [&](Tile &tile)
+	Hook(mem, 0x8a3a, 0xcd /*CALL nn*/, [&](Tile &tile)
 	{
-		// CALL nn
-		Z80_PC(tile) += 3;
-		Call(tile, tile.DPeek(Z80_PC(tile) - 2));
-
 		tile.drawing = true;
 	});
 
 	// Draw main sprite (including collision detection)
-	Hook(mem, 0x95c8, 0x2a, [&](Tile &tile)
+	Hook(mem, 0x95c8, 0x2a /*LD HL,(nn)*/, [&](Tile &tile)
 	{
-		// LD HL,(nn)
-		Z80_PC(tile) += 3;
-		Z80_HL(tile) = tile.DPeekDPeek(Z80_PC(tile) - 2);
-
 		if (!IsActiveTile(tile))
 			Ret(tile);
 	});
 
 	// Move Willy (falling)
-	Hook(mem, 0x8dd3, 0x3a, [&](Tile &tile)
+	Hook(mem, 0x8dd3, 0x3a /*LD A,(nn)*/, [&](Tile &tile)
 	{
-		// LD A,(nn)
-		Z80_PC(tile) += 3;
-		Z80_A(tile) = tile.mem[tile.DPeek(Z80_PC(tile) - 2)];
-
 		if (!IsActiveTile(tile))
 			Ret(tile);
 	});

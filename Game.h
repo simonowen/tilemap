@@ -156,5 +156,11 @@ public:
 protected:
 	int m_current_room = -1;
 	std::vector<Tile> m_tiles;
-	std::map<uint16_t, HookFunction> m_hooks;
+
+	struct HookData
+	{
+		HookFunction func;
+		uint8_t orig_opcode;
+	};
+	std::map<uint16_t, HookData> m_hooks;
 };

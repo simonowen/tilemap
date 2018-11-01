@@ -1420,7 +1420,7 @@ INSTRUCTION(XY_CB)
 INSTRUCTION(XY_illegal) {PC += 1; return instruction_table[BYTE0 = BYTE1](object) + 4;}
 INSTRUCTION(ED_illegal) {PC += 2; return 8;}
 
-INSTRUCTION(hook) {HOOK(PC); return 4;}	// SNO
+INSTRUCTION(hook) {HOOK(PC); return 0;}	// SNO
 
 /* MARK: - Main Functions */
 
@@ -1633,7 +1633,7 @@ CPU_Z80_API void z80_int(Z80 *object, zboolean state) {INT = state;}
 		{Z_EMULATOR_FUNCTION_OUT_8BIT,	 O(out	   )},
 		{Z_EMULATOR_FUNCTION_IRQ_DATA,	 O(int_data)},
 		{Z_EMULATOR_FUNCTION_HALT,		 O(halt	   )},
-		{Z_EMULATOR_FUNCTION_HOOK,		 O(hook)}	// SNO
+		{Z_EMULATOR_FUNCTION_HOOK,		 O(hook    )}	// SNO
 	};
 
 	CPU_Z80_ABI ZCPUEmulatorABI const abi_emulation_cpu_z80 = {
