@@ -711,7 +711,7 @@ HRESULT TileView::InitD3D()
 	for (int i = 0; i < 16; ++i)
 	{
 		// ToDo: system should supply palette.
-		auto intensity = (i >= 8) ? 255.0f : 223.0f;
+		auto intensity = (i >= 8) ? 1.0f : (223.0f / 255.0f);
 		palette.push_back((i & 2) ? intensity : 0.0f);
 		palette.push_back((i & 4) ? intensity : 0.0f);
 		palette.push_back((i & 1) ? intensity : 0.0f);
