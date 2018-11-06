@@ -1,11 +1,21 @@
-/* Zilog Z80 CPU Emulator
-  ____    ____    ___ ___     ___
- / __ \  / ___\  / __` __`\  / __`\
-/\ \/  \/\ \__/_/\ \/\ \/\ \/\  __/
-\ \__/\_\ \_____\ \_\ \_\ \_\ \____\
- \/_/\/_/\/_____/\/_/\/_/\/_/\/____/
+/*  ______   ______  ______
+   /\___  \ /\  __ \/\     \
+   \/__/  /_\ \  __ \ \  \  \
+      /\_____\ \_____\ \_____\
+Zilog \/_____/\/_____/\/_____/ CPU Emulator
 Copyright (C) 1999-2018 Manuel Sainz de Baranda y Goñi.
-Released under the terms of the GNU General Public License v3. */
+
+This emulator is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published  by the Free Software
+Foundation, either  version 3 of  the License, or  (at your option)  any later
+version.
+
+This emulator is distributed  in the hope that it will  be useful, but WITHOUT
+ANY WARRANTY; without even the  implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received  a copy of the GNU General Public License  along with
+this emulator. If not, see <http://www.gnu.org/licenses/>. */
 
 #include <Z/macros/value.h>
 #include <Z/macros/pointer.h>
@@ -18,12 +28,18 @@ Released under the terms of the GNU General Public License v3. */
 #	define CPU_Z80_API Z_API_EXPORT
 #endif
 
-#if defined(CPU_Z80_HIDE_ABI)
-#	define CPU_Z80_ABI static
-#elif defined(CPU_Z80_STATIC)
-#	define CPU_Z80_ABI
-#else
-#	define CPU_Z80_ABI Z_API_EXPORT
+#if defined(CPU_Z80_WITH_MODULE_ABI) && !defined(CPU_Z80_WITH_ABI)
+#	define CPU_Z80_WITH_ABI
+#endif
+
+#ifdef CPU_Z80_WITH_ABI
+#	if defined(CPU_Z80_HIDE_ABI)
+#		define CPU_Z80_ABI static
+#	elif defined(CPU_Z80_STATIC)
+#		define CPU_Z80_ABI
+#	else
+#		define CPU_Z80_ABI Z_API_EXPORT
+#	endif
 #endif
 
 #if defined(CPU_Z80_USE_LOCAL_HEADER)
@@ -47,29 +63,28 @@ typedef zuint8 (* Instruction)(Z80 *object);
 
 /* MARK: - Macros & Functions: Callback */
 
-#define READ_8(address)		object->read	(object->callback_context, (zuint16)(address))
-#define WRITE_8(address, value) object->write	(object->callback_context, (zuint16)(address), (zuint8)(value))
-#define IN(port)		object->in	(object->callback_context, (zuint16)(port   ))
-#define OUT(port, value)	object->out	(object->callback_context, (zuint16)(port   ), (zuint8)(value))
-#define INT_DATA		object->int_data(object->callback_context)
+#define READ_8(address)		object->read	(object->context, (zuint16)(address))
+#define WRITE_8(address, value) object->write	(object->context, (zuint16)(address), (zuint8)(value))
+#define IN(port)		object->in	(object->context, (zuint16)(port   ))
+#define OUT(port, value)	object->out	(object->context, (zuint16)(port   ), (zuint8)(value))
+#define INT_DATA		object->int_data(object->context)
 #define READ_OFFSET(address)	((zsint8)READ_8(address))
-#define SET_HALT		if (object->halt != NULL) object->halt(object->callback_context, TRUE )
-#define CLEAR_HALT		if (object->halt != NULL) object->halt(object->callback_context, FALSE)
-#define BREAKPOINT(address)	if (object->hook != NULL) object->hook(object->callback_context, (address))	// SNO
+#define SET_HALT		if (object->halt != NULL) object->halt(object->context, TRUE )
+#define CLEAR_HALT		if (object->halt != NULL) object->halt(object->context, FALSE)
 
 
-static zuint16 read_16bit(Z80 *object, zuint16 address)
+static Z_INLINE zuint16 read_16bit(Z80 *object, zuint16 address)
 	{return (zuint16)(READ_8(address) | (zuint16)READ_8(address + 1) << 8);}
 
 
-static void write_16bit(Z80 *object, zuint16 address, zuint16 value)
+static Z_INLINE void write_16bit(Z80 *object, zuint16 address, zuint16 value)
 	{
 	WRITE_8(address, (zuint8)value);
 	WRITE_8(address + 1, value >> 8);
 	}
 
 
-#define READ_16( address)	 read_16bit (object, (zuint16)(address))
+#define READ_16(address)	 read_16bit (object, (zuint16)(address))
 #define WRITE_16(address, value) write_16bit(object, (zuint16)(address), (zuint16)(value))
 
 
@@ -87,7 +102,6 @@ static void write_16bit(Z80 *object, zuint16 address, zuint16 value)
 #define BC_   object->state.Z_Z80_STATE_MEMBER_BC_
 #define DE_   object->state.Z_Z80_STATE_MEMBER_DE_
 #define HL_   object->state.Z_Z80_STATE_MEMBER_HL_
-
 #define A     object->state.Z_Z80_STATE_MEMBER_A
 #define F     object->state.Z_Z80_STATE_MEMBER_F
 #define B     object->state.Z_Z80_STATE_MEMBER_B
@@ -98,32 +112,28 @@ static void write_16bit(Z80 *object, zuint16 address, zuint16 value)
 #define R_ALL ((R & 127) | (R7 & 128))
 
 
-/* MARK: - Macros: Internal State */
+/* MARK: - Macros: Internal Bits */
 
-#define R7     object->r7
-#define HALT   object->state.Z_Z80_STATE_MEMBER_HALT
-#define IFF1   object->state.Z_Z80_STATE_MEMBER_IFF1
-#define IFF2   object->state.Z_Z80_STATE_MEMBER_IFF2
-#define EI     object->state.Z_Z80_STATE_MEMBER_EI
-#define IM     object->state.Z_Z80_STATE_MEMBER_IM
-#define NMI    object->state.Z_Z80_STATE_MEMBER_NMI
-#define INT    object->state.Z_Z80_STATE_MEMBER_IRQ
-#define CYCLES object->cycles
+#define HALT object->state.Z_Z80_STATE_MEMBER_HALT
+#define IFF1 object->state.Z_Z80_STATE_MEMBER_IFF1
+#define IFF2 object->state.Z_Z80_STATE_MEMBER_IFF2
+#define EI   object->state.Z_Z80_STATE_MEMBER_EI
+#define IM   object->state.Z_Z80_STATE_MEMBER_IM
+#define NMI  object->state.Z_Z80_STATE_MEMBER_NMI
+#define INT  object->state.Z_Z80_STATE_MEMBER_IRQ
 
 
-/* MARK: - Macros: Cached Instruction Data */
+/* MARK: - Macros: Temporal Data */
 
+#define CYCLES	    object->cycles
+#define R7	    object->r7
 #define BYTE(index) object->data.array_uint8[index]
 #define BYTE0	    BYTE(0)
 #define BYTE1	    BYTE(1)
 #define BYTE2	    BYTE(2)
 #define BYTE3	    BYTE(3)
-
-
-/* MARK: - Macros: Memory Addressing */
-
-#define XY	   object->xy.value_uint16
-#define XY_ADDRESS ((zuint16)(XY + object->data.array_sint8[2]))
+#define XY	    object->xy.value_uint16
+#define XY_ADDRESS  ((zuint16)(XY + object->data.array_sint8[2]))
 
 
 /* MARK: - Macros: Flags */
@@ -139,13 +149,14 @@ static void write_16bit(Z80 *object, zuint16 address, zuint16 value)
 
 #define SZPF (SF | ZF | PF)
 #define SYXF (SF | YF | XF)
-#define ZPF  (ZF | PF     )
+#define ZPF  (ZF | PF	  )
 #define YXCF (YF | XF | CF)
 #define YXF  (YF | XF	  )
 #define PNF  (PF | NF	  )
 #define HCF  (HF | CF	  )
 
 #define F_H   (F &   HF)
+#define F_N   (F &   NF)
 #define F_C   (F &   CF)
 #define F_SZP (F & SZPF)
 #define A_SYX (A & SYXF)
@@ -178,12 +189,12 @@ static zuint8 const pf_parity_table[256] = {
 
 #define PF_PARITY(value) pf_parity_table[value]
 
-#define VF(function, operand)					     \
-static zuint8 pf_overflow_##function##8(zsint8 a, zsint8 b) \
-	{							     \
-	zsint total = ((zsint)a) operand ((zsint)b);		     \
-								     \
-	return total < -128 || total > 127 ? PF : 0;		     \
+#define VF(function, operand)						 \
+static Z_INLINE zuint8 pf_overflow_##function##8(zuint8 a, zuint8 b)	 \
+	{								 \
+	zsint total = ((zsint)((zsint8)a)) operand ((zsint)((zsint8)b)); \
+									 \
+	return total < -128 || total > 127 ? PF : 0;			 \
 	}
 
 VF(add, +)
@@ -191,9 +202,9 @@ VF(sub, -)
 
 #undef	VF
 #define VF(function, bits, type, operand, minimum, maximum)					\
-static zuint8 pf_overflow_##function##bits(zsint##bits a, zsint##bits b, zuint8 carry) \
+static Z_INLINE zuint8 pf_overflow_##function##bits(zuint##bits a, zuint##bits b, zuint8 carry) \
 	{											\
-	type total = ((type)a) operand ((type)b) operand carry;					\
+	type total = ((type)((zsint##bits)a)) operand ((type)((zsint##bits)b)) operand carry;	\
 												\
 	return total < minimum || total > maximum ? PF : 0;					\
 	}
@@ -241,7 +252,7 @@ static zuint8 const j_k_p_q_table[8] = {
 };
 
 #define R_8(name, table, offset, mask, shift) \
-static zuint8 *name(Z80 *object)     \
+static Z_INLINE zuint8 *name(Z80 *object)     \
 	{return ((zuint8 *)object) + table[(BYTE(offset) & mask) shift];}
 
 R_8(__xxx___0,	   x_y_table, 0, 56, >> 3   )
@@ -286,7 +297,7 @@ static zuint8 const w_table[4] = {
 };
 
 #define R_16(name, table, offset)	   \
-static zuint16 *name(Z80 *object) \
+static Z_INLINE zuint16 *name(Z80 *object) \
 	{return Z_BOP(zuint16 *, object, table[(BYTE(offset) & 48) >> 4]);}
 
 R_16(__ss____0, s_table, 0)
@@ -311,7 +322,7 @@ R_16(__tt____ , t_table, 0)
 
 static zuint8 const z_table[8] = {ZF, ZF, CF, CF, PF, PF, SF, SF};
 
-static zboolean __zzz___(Z80 *object)
+static Z_INLINE zboolean __zzz___(Z80 *object)
 	{
 	zuint8 z = (BYTE0 & 56) >> 3;
 
@@ -566,7 +577,7 @@ static zuint8 __ggg___(Z80 *object, zuint8 offset, zuint8 value)
    '----------'   | 1 = set |
 		  '--------*/
 
-static zuint8 _m______(Z80 *object, zuint8 offset, zuint8 value)
+static Z_INLINE zuint8 _m______(Z80 *object, zuint8 offset, zuint8 value)
 	{
 	zuint8 t = object->data.array_uint8[offset];
 
@@ -668,7 +679,7 @@ static zuint8 _m______(Z80 *object, zuint8 offset, zuint8 value)
 	PC -= 2;	return 21;
 
 
-static void add_RR_NN(Z80 *object, zuint16 *r, zuint16 v)
+static Z_INLINE void add_RR_NN(Z80 *object, zuint16 *r, zuint16 v)
 	{
 	zuint16 t = *r + v;
 
@@ -704,7 +715,7 @@ static void add_RR_NN(Z80 *object, zuint16 *r, zuint16 v)
 #define RXA						  \
 	F =	F_SZP  /* SF, ZF, PF unchanged	       */ \
 		| A_YX /* YF = A.5; XF = A.3	       */ \
-		| c;   /* CF = pA.7 (rla) / pA.0 (rra) */
+		| c;   /* CF = Ai.7 (rla) / Ai.0 (rra) */
 
 
 #define RXD(a, b, c)						   \
@@ -1011,25 +1022,19 @@ INSTRUCTION(im_2) {PC += 2; IM = 2;		     return 8;}
 
 INSTRUCTION(daa)
 	{
-	zuint8 t = A; PC++;
+	zuint8 t = (F_H || (A & 0xF ) > 9) ? 6 : 0;
 
-	if (F & NF)
-		{
-		if (F_H || (A & 0xF ) > 9) t -= 6;
-		if (F_C ||  A > 0x99)	   t -= 0x60;
-		}
-
-	else	{
-		if (F_H || (A & 0xF ) > 9) t += 6;
-		if (F_C ||  A > 0x99)	   t += 0x60;
-		}
+	if (F_C || A > 0x99) t |= 0x60;
+	t = (F_N) ? A - t : A + t;
+	PC++;
 
 	F = (zuint8)
-		((F & NF)		 /* NF unchanged		 */
+		((F_N)			 /* NF unchanged		 */
 		 | (t & SYXF)		 /* SF = A.7; YF = A.5; XF = A.3 */
-		 | ZF_ZERO(t)		 /* ZF = !A			 */
-		 | ((A & HF) ^ (t & HF)) /* HF = pA.4 xor A.4		 */
-		 | (F_C | (A > 0x99)));	 /* CF = CF | (pA > 0x99)	 */
+		 | ZF_ZERO(t)		 /* ZF = !Af			 */
+		 | ((A & HF) ^ (t & HF)) /* HF = Ai.4 xor Af.4		 */
+		 | PF_PARITY(t)		 /* PF = Parity of Af		 */
+		 | (F_C | (A > 0x99)));	 /* CF = CF | (Ai > 0x99)	 */
 
 	A = t;
 	return 4;
@@ -1276,7 +1281,6 @@ INSTRUCTION(FD);
 INSTRUCTION(XY_CB);
 INSTRUCTION(ED_illegal);
 INSTRUCTION(XY_illegal);
-INSTRUCTION(hook);	// SNO
 
 
 /* MARK: - Instruction Function Tables */
@@ -1289,7 +1293,7 @@ static Instruction const instruction_table[256] = {
 /* 3 */ jr_Z_OFFSET, ld_SS_WORD, ld_vWORD_a,  inc_SS,	   V_vhl,	V_vhl,	  ld_vhl_BYTE, scf,	 jr_Z_OFFSET, add_hl_SS, ld_a_vWORD,  dec_SS,	 V_X,	      V_X,	 ld_X_BYTE, ccf,
 /* 4 */ ld_X_Y,	     ld_X_Y,	 ld_X_Y,      ld_X_Y,	   ld_X_Y,	ld_X_Y,	  ld_X_vhl,    ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_vhl,  ld_X_Y,
 /* 5 */ ld_X_Y,	     ld_X_Y,	 ld_X_Y,      ld_X_Y,	   ld_X_Y,	ld_X_Y,	  ld_X_vhl,    ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_vhl,  ld_X_Y,
-/* 6 */ ld_X_Y,	     ld_X_Y,	 ld_X_Y,      ld_X_Y,	   hook/*SNO*/,	ld_X_Y,	  ld_X_vhl,    ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_vhl,  ld_X_Y,
+/* 6 */ ld_X_Y,	     ld_X_Y,	 ld_X_Y,      ld_X_Y,	   ld_X_Y,	ld_X_Y,	  ld_X_vhl,    ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_vhl,  ld_X_Y,
 /* 7 */ ld_vhl_Y,    ld_vhl_Y,	 ld_vhl_Y,    ld_vhl_Y,	   ld_vhl_Y,	ld_vhl_Y, halt,	       ld_vhl_Y, ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_vhl,  ld_X_Y,
 /* 8 */ U_a_Y,	     U_a_Y,	 U_a_Y,	      U_a_Y,	   U_a_Y,	U_a_Y,	  U_a_vhl,     U_a_Y,	 U_a_Y,	      U_a_Y,	 U_a_Y,	      U_a_Y,	 U_a_Y,	      U_a_Y,	 U_a_vhl,   U_a_Y,
 /* 9 */ U_a_Y,	     U_a_Y,	 U_a_Y,	      U_a_Y,	   U_a_Y,	U_a_Y,	  U_a_vhl,     U_a_Y,	 U_a_Y,	      U_a_Y,	 U_a_Y,	      U_a_Y,	 U_a_Y,	      U_a_Y,	 U_a_vhl,   U_a_Y,
@@ -1413,7 +1417,6 @@ INSTRUCTION(XY_CB)
 INSTRUCTION(XY_illegal) {PC += 1; return instruction_table[BYTE0 = BYTE1](object) + 4;}
 INSTRUCTION(ED_illegal) {PC += 2; return 8;}
 
-INSTRUCTION(hook) {BREAKPOINT(PC); return 4; }	// SNO
 
 /* MARK: - Main Functions */
 
@@ -1519,10 +1522,6 @@ CPU_Z80_API zusize z80_run(Z80 *object, zusize cycles)
 			R++;		 /* Consume memory refresh.	*/
 			IFF1 = IFF2 = 0; /* Clear interrupt flip-flops.	*/
 
-#			if defined(CPU_Z80_AUTOCLEAR_INT_LINE)
-				INT = FALSE;
-#			endif
-
 			switch (IM)
 				{
 				/*------------------------------.
@@ -1604,19 +1603,19 @@ CPU_Z80_API void z80_int(Z80 *object, zboolean state) {INT = state;}
 
 /* MARK: - ABI */
 
-#if defined(CPU_Z80_BUILD_ABI) || defined(CPU_Z80_BUILD_MODULE_ABI)
+#ifdef CPU_Z80_WITH_ABI
 
 	static void will_read_state(Z80 *object) {R  = R_ALL;}
 	static void did_write_state(Z80 *object) {R7 = R;    }
 
 	static ZCPUEmulatorExport const exports[7] = {
-		{Z_EMULATOR_FUNCTION_POWER,	      (ZEmulatorFunction)z80_power	},
-		{Z_EMULATOR_FUNCTION_RESET,	      (ZEmulatorFunction)z80_reset	},
-		{Z_EMULATOR_FUNCTION_RUN,	      (ZEmulatorFunction)z80_run	},
-		{Z_EMULATOR_FUNCTION_WILL_READ_STATE, (ZEmulatorFunction)will_read_state},
-		{Z_EMULATOR_FUNCTION_DID_WRITE_STATE, (ZEmulatorFunction)did_write_state},
-		{Z_EMULATOR_FUNCTION_NMI,	      (ZEmulatorFunction)z80_nmi	},
-		{Z_EMULATOR_FUNCTION_IRQ,	      (ZEmulatorFunction)z80_int	}
+		{Z_EMULATOR_FUNCTION_POWER,	      {(void (*)(void))z80_power      }},
+		{Z_EMULATOR_FUNCTION_RESET,	      {(void (*)(void))z80_reset      }},
+		{Z_EMULATOR_FUNCTION_RUN,	      {(void (*)(void))z80_run	      }},
+		{Z_EMULATOR_FUNCTION_WILL_READ_STATE, {(void (*)(void))will_read_state}},
+		{Z_EMULATOR_FUNCTION_DID_WRITE_STATE, {(void (*)(void))did_write_state}},
+		{Z_EMULATOR_FUNCTION_NMI,	      {(void (*)(void))z80_nmi	      }},
+		{Z_EMULATOR_FUNCTION_IRQ,	      {(void (*)(void))z80_int	      }}
 	};
 
 	static ZCPUEmulatorInstanceImport const instance_imports[6] = {
@@ -1625,8 +1624,7 @@ CPU_Z80_API void z80_int(Z80 *object, zboolean state) {INT = state;}
 		{Z_EMULATOR_FUNCTION_IN_8BIT,	 O(in	   )},
 		{Z_EMULATOR_FUNCTION_OUT_8BIT,	 O(out	   )},
 		{Z_EMULATOR_FUNCTION_IRQ_DATA,	 O(int_data)},
-		{Z_EMULATOR_FUNCTION_HALT,		 O(halt	   )},
-		{Z_EMULATOR_FUNCTION_HOOK,		 O(hook)}	// SNO
+		{Z_EMULATOR_FUNCTION_HALT,	 O(halt	   )}
 	};
 
 	CPU_Z80_ABI ZCPUEmulatorABI const abi_emulation_cpu_z80 = {
@@ -1643,7 +1641,7 @@ CPU_Z80_API void z80_int(Z80 *object, zboolean state) {INT = state;}
 
 #endif
 
-#if defined(CPU_Z80_BUILD_MODULE_ABI)
+#ifdef CPU_Z80_WITH_MODULE_ABI
 
 #	include <Z/ABIs/generic/module.h>
 
