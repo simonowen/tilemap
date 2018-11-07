@@ -71,6 +71,7 @@ typedef zuint8 (* Instruction)(Z80 *object);
 #define READ_OFFSET(address)	((zsint8)READ_8(address))
 #define SET_HALT		if (object->halt != NULL) object->halt(object->context, TRUE )
 #define CLEAR_HALT		if (object->halt != NULL) object->halt(object->context, FALSE)
+#define HOOK(address)		if (object->hook != NULL) object->hook(object->context, (address)) /* SNO */
 
 
 static Z_INLINE zuint16 read_16bit(Z80 *object, zuint16 address)
@@ -1281,6 +1282,7 @@ INSTRUCTION(FD);
 INSTRUCTION(XY_CB);
 INSTRUCTION(ED_illegal);
 INSTRUCTION(XY_illegal);
+INSTRUCTION(hook); /* SNO */
 
 
 /* MARK: - Instruction Function Tables */
@@ -1293,7 +1295,7 @@ static Instruction const instruction_table[256] = {
 /* 3 */ jr_Z_OFFSET, ld_SS_WORD, ld_vWORD_a,  inc_SS,	   V_vhl,	V_vhl,	  ld_vhl_BYTE, scf,	 jr_Z_OFFSET, add_hl_SS, ld_a_vWORD,  dec_SS,	 V_X,	      V_X,	 ld_X_BYTE, ccf,
 /* 4 */ ld_X_Y,	     ld_X_Y,	 ld_X_Y,      ld_X_Y,	   ld_X_Y,	ld_X_Y,	  ld_X_vhl,    ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_vhl,  ld_X_Y,
 /* 5 */ ld_X_Y,	     ld_X_Y,	 ld_X_Y,      ld_X_Y,	   ld_X_Y,	ld_X_Y,	  ld_X_vhl,    ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_vhl,  ld_X_Y,
-/* 6 */ ld_X_Y,	     ld_X_Y,	 ld_X_Y,      ld_X_Y,	   ld_X_Y,	ld_X_Y,	  ld_X_vhl,    ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_vhl,  ld_X_Y,
+/* 6 */ ld_X_Y,	     ld_X_Y,	 ld_X_Y,      ld_X_Y,	   hook/*SNO*/,	ld_X_Y,	  ld_X_vhl,    ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_vhl,  ld_X_Y,
 /* 7 */ ld_vhl_Y,    ld_vhl_Y,	 ld_vhl_Y,    ld_vhl_Y,	   ld_vhl_Y,	ld_vhl_Y, halt,	       ld_vhl_Y, ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_vhl,  ld_X_Y,
 /* 8 */ U_a_Y,	     U_a_Y,	 U_a_Y,	      U_a_Y,	   U_a_Y,	U_a_Y,	  U_a_vhl,     U_a_Y,	 U_a_Y,	      U_a_Y,	 U_a_Y,	      U_a_Y,	 U_a_Y,	      U_a_Y,	 U_a_vhl,   U_a_Y,
 /* 9 */ U_a_Y,	     U_a_Y,	 U_a_Y,	      U_a_Y,	   U_a_Y,	U_a_Y,	  U_a_vhl,     U_a_Y,	 U_a_Y,	      U_a_Y,	 U_a_Y,	      U_a_Y,	 U_a_Y,	      U_a_Y,	 U_a_vhl,   U_a_Y,
@@ -1416,6 +1418,8 @@ INSTRUCTION(XY_CB)
 
 INSTRUCTION(XY_illegal) {PC += 1; return instruction_table[BYTE0 = BYTE1](object) + 4;}
 INSTRUCTION(ED_illegal) {PC += 2; return 8;}
+
+INSTRUCTION(hook) {HOOK(PC); return 0;}	/* SNO */
 
 
 /* MARK: - Main Functions */

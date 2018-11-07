@@ -94,6 +94,12 @@ typedef struct {
 
 	void (* halt)(void *context, zboolean state);
 
+	/** Callback: Called when the LD H,H opcode is executed.
+	  * @param context The value of the member @c context.
+	  * @param address The current program counter address. */
+
+	void(* hook)(void *context, zuint16 address);
+
 	/** CPU registers and internal bits.
 	  * @details It contains the state of the registers, as well as the
 	  * interrupt flip-flops, variables related to interrupts and other
