@@ -7,6 +7,25 @@
 
 #include <stddef.h>
 
+/* <Z/constants/base.h> */
+
+#ifndef NULL
+#	ifdef __cplusplus
+#		define NULL 0
+#	else
+#		define NULL ((void *)0)
+#	endif
+#endif
+
+#ifndef TRUE
+#	define TRUE 1
+#endif
+
+#ifndef FALSE
+#	define FALSE 0
+#endif
+
+
 /* Replacement for <Z/macros/language.h> */
 
 #if (defined(_WIN64) || defined(_WIN32)) && defined(_MSC_VER)
@@ -26,6 +45,30 @@
 #else
 #	define Z_OFFSET_OF(type, member) (((size_t)&((type *)(1))->member) - 1)
 #endif
+
+
+/* <Z/macros/pointer.h> */
+
+#define Z_BOP(type, base, offset) \
+	((type)(((zuint8 *)(base)) + (offset)))
+
+
+/* <Z/macros/structure.h> */
+
+#define Z_DEFINE_STRICT_STRUCTURE_BEGIN Z_STRICT_SIZE_BEGIN typedef struct {
+#define Z_DEFINE_STRICT_STRUCTURE_END   } Z_STRICT_SIZE_END
+#define Z_DEFINE_STRICT_UNION_BEGIN     Z_STRICT_SIZE_BEGIN typedef union {
+#define Z_DEFINE_STRICT_UNION_END       } Z_STRICT_SIZE_END
+
+
+/* <Z/macros/value.h> */
+
+#define Z_8BIT_ROTATE_LEFT(value, rotation) \
+	(((value) << (rotation)) | ((value) >> (8 - (rotation))))
+
+#define Z_8BIT_ROTATE_RIGHT(value, rotation) \
+	(((value) >> (rotation)) | ((value) << (8 - (rotation))))
+
 
 /* Replacement for <Z/types/base.h> (little-endian only implementation) */
 
@@ -106,41 +149,6 @@ Z_DEFINE_STRICT_UNION_BEGIN
 	} values_sint8;
 Z_DEFINE_STRICT_UNION_END Z32Bit;
 
-/* <Z/constants/base.h> */
-
-#ifndef NULL
-#	ifdef __cplusplus
-#		define NULL 0
-#	else
-#		define NULL ((void *)0)
-#	endif
-#endif
-
-#ifndef TRUE
-#	define TRUE 1
-#endif
-
-#ifndef FALSE
-#	define FALSE 0
-#endif
-
-/* <Z/macros/structure.h> */
-
-#define Z_DEFINE_STRICT_STRUCTURE_BEGIN Z_STRICT_SIZE_BEGIN typedef struct {
-#define Z_DEFINE_STRICT_STRUCTURE_END   } Z_STRICT_SIZE_END
-
-/* <Z/macros/value.h> */
-
-#define Z_8BIT_ROTATE_LEFT(value, rotation) \
-	(((value) << (rotation)) | ((value) >> (8 - (rotation))))
-
-#define Z_8BIT_ROTATE_RIGHT(value, rotation) \
-	(((value) >> (rotation)) | ((value) << (8 - (rotation))))
-
-/* <Z/macros/pointer.h> */
-
-#define Z_BOP(type, base, offset) \
-	((type)(((zuint8 *)(base)) + (offset)))
 
 /* <Z/hardware/CPU/architecture/Z80.h> */
 
