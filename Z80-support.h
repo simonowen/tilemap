@@ -101,11 +101,11 @@
 		typedef signed int         zsint32;
 #	else
 		typedef unsigned __int8  zuint8;
-		typedef unsigned __int16 zuint16t;
-		typedef unsigned __int32 zuint32t;
+		typedef unsigned __int16 zuint16;
+		typedef unsigned __int32 zuint32;
 		typedef signed __int8    zsint8;
-		typedef signed __int16   zsint16t;
-		typedef signed __int32   zsint32t;
+		typedef signed __int16   zsint16;
+		typedef signed __int32   zsint32;
 #	endif
 #else
 #	include <stdint.h>
