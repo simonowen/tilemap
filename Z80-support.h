@@ -27,7 +27,7 @@
 #	define Z_OFFSET_OF(type, member) (((size_t)&((type *)(1))->member) - 1)
 #endif
 
-/* Replacement for <Z/types/base.h> */
+/* Replacement for <Z/types/base.h> (little-endian only implementation) */
 
 #if (defined(_WIN64) || defined(_WIN32)) && defined(_MSC_VER)
 
@@ -61,6 +61,50 @@
 #endif
 
 typedef size_t zusize;
+
+Z_DEFINE_STRICT_UNION_BEGIN
+	zuint16 value_uint16;
+	zsint16 value_sint16;
+	zuint8	array_uint8[2];
+	zsint8	array_sint8[2];
+
+	struct {zuint8 index0;
+		zuint8 index1;
+	} values_uint8;
+
+	struct {zsint8 index0;
+		zsint8 index1;
+	} values_sint8;
+Z_DEFINE_STRICT_UNION_END Z16Bit;
+
+Z_DEFINE_STRICT_UNION_BEGIN
+	zuint32 value_uint32;
+	zsint32 value_sint32;
+	zuint16 array_uint16[2];
+	zsint16 array_sint16[2];
+	zuint8	array_uint8 [4];
+	zsint8	array_sint8 [4];
+
+	struct {zuint16 index0;
+		zuint16 index1;
+	} values_uint16;
+
+	struct {zsint16 index0;
+		zsint16 index1;
+	} values_sint16;
+
+	struct {zuint8 index0;
+		zuint8 index1;
+		zuint8 index2;
+		zuint8 index3;
+	} values_uint8;
+
+	struct {zsint8 index0;
+		zsint8 index1;
+		zsint8 index2;
+		zsint8 index3;
+	} values_sint8;
+Z_DEFINE_STRICT_UNION_END Z32Bit;
 
 /* <Z/constants/base.h> */
 
