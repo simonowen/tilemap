@@ -35,12 +35,8 @@ DD_Game::DD_Game(std::shared_ptr<TileView> pTileView, bool cheat_pokes)
 void DD_Game::InstallHooks(std::vector<uint8_t> &mem)
 {
 	// Game start from menu
-	Hook(mem, 0xc8cc, 0x3e, [&](Tile &tile)
+	Hook(mem, 0xc8cc, 0x3e /*LD A,n*/, [&](Tile &tile)
 	{
-		// LD A,n
-		Z80_PC(tile) += 2;
-		Z80_A(tile) = tile.mem[Z80_PC(tile) - 1];
-
 		if (IsActiveTile(tile))
 		{
 			CloneToAllTiles(tile);
@@ -54,11 +50,8 @@ void DD_Game::InstallHooks(std::vector<uint8_t> &mem)
 	});
 
 	// After enemy reset
-	Hook(mem, 0xef47, 0xc9, [&](Tile &tile)
+	Hook(mem, 0xef47, 0xc9 /*RET*/, [&](Tile &tile)
 	{
-		// RET
-		Ret(tile);
-
 		// Duplicate enemies in the overlap area between rooms
 		std::vector<uint16_t> dup_enemies = {
 			0xa4c3, 0xa509,		// 2nd room down in lift [red], and room left [yellow]
@@ -76,13 +69,11 @@ void DD_Game::InstallHooks(std::vector<uint8_t> &mem)
 	});
 
 	// Entering room
-	Hook(mem, 0xcbbd, 0x32, [&](Tile &tile)
+	Hook(mem, 0xcbbd, 0x32 /*LD (nn),A*/, [&](Tile &tile)
 	{
-		// LD (nn),A
-		Z80_PC(tile) += 3;
 		auto room_addr = tile.DPeek(Z80_PC(tile) - 2);
-
 		auto new_room = Z80_A(tile);
+
 		if (IsActiveTile(tile) && new_room != tile.room)
 		{
 			auto &tile_new = FindRoomTile(new_room);
@@ -101,48 +92,29 @@ void DD_Game::InstallHooks(std::vector<uint8_t> &mem)
 	});
 
 	// Dan handler (drawing, falling, ...)
-	Hook(mem, 0xcfd9, 0x3a, [&](Tile &tile)
+	Hook(mem, 0xcfd9, 0x3a /*LD A,(nn)*/, [&](Tile &tile)
 	{
-		// LD A,(nn)
-		Z80_PC(tile) += 3;
-		Z80_A(tile) = tile.mem[tile.DPeek(Z80_PC(tile) - 2)];
-
 		if (!IsActiveTile(tile))
 			Ret(tile);
 
 		tile.drawing = true;
 	});
 
-	// Hide Dan on lift in inactive rooms
-	Hook(mem, 0xd184, 0xcd, [&](Tile &tile)
+	// Return-if-inactive helper.
+	auto ret_if_inactive = [&](Tile &tile)
 	{
-		// CALL nn
-		Z80_PC(tile) += 3;
-
-		if (IsActiveTile(tile))
-			Call(tile, tile.DPeek(Z80_PC(tile) - 2));
-	});
-
-	// Hide lift in inactive room (due to position assist)
-	Hook(mem, 0xcd3c, 0x12, [&](Tile &tile)
-	{
-		// LD (DE),A
-		Z80_PC(tile)++;
-
-		if (IsActiveTile(tile))
-			tile.mem[Z80_DE(tile)] = Z80_A(tile);
-	});
-
-	// Hide raft in inactive rooms (due to position assist)
-	Hook(mem, 0xda3b, 0x79, [&](Tile &tile)
-	{
-		// LD A,C
-		Z80_PC(tile)++;
-		Z80_A(tile) = Z80_C(tile);
-
 		if (!IsActiveTile(tile))
 			Ret(tile);
-	});
+	};
+
+	// Hide Dan on lift in inactive rooms
+	Hook(mem, 0xd184, 0xcd /*CALL nn*/, ret_if_inactive);
+
+	// Hide lift in inactive room (due to position assist)
+	Hook(mem, 0xcd2b, 0x7b /*LD A,E*/, ret_if_inactive);
+
+	// Hide raft in inactive rooms (due to position assist)
+	Hook(mem, 0xda3b, 0x79 /*LD A,C*/, ret_if_inactive);
 }
 
 std::vector<MapRoom> DD_Game::BuildMap(const std::vector<uint8_t> &mem)

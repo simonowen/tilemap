@@ -32,7 +32,7 @@ void SpectrumGame::SetMap(const std::vector<MapRoom> &map)
 		z80_power(&tile.z80, 1);
 		z80_reset(&tile.z80);
 		tile.z80.state = snapshot_cpu_state;
-		tile.z80.callback_context = &tile;
+		tile.z80.context = &tile;
 		tile.mem = snapshot_mem;
 
 		tile.z80.read = [](void *context, zuint16 address) -> zuint8 {

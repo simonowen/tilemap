@@ -47,13 +47,10 @@ void TT_Game::InstallHooks(std::vector<uint8_t> &mem)
 	});
 
 	// Room number update on room change
-	Hook(mem, 0xac73, 0x32, [&](Tile &tile)
+	Hook(mem, 0xac73, 0x32 /*LD (nn),A*/, [&](Tile &tile)
 	{
-		// LD (nn),A
-		Z80_PC(tile) += 3;
 		auto room_addr = tile.DPeek(Z80_PC(tile) - 2);
 		auto new_room = Z80_A(tile);
-		tile.mem[room_addr] = new_room;
 
 		// Entering the final room has side-effects that break the penultimate room,
 		// so clone at this point instead of when the room is due to be drawn.
@@ -73,12 +70,9 @@ void TT_Game::InstallHooks(std::vector<uint8_t> &mem)
 	});
 
 	// Room draw start
-	Hook(mem, 0xae77, 0x2a, [&](Tile &tile)
+	Hook(mem, 0xae77, 0x2a /*LD HL,(nn)*/, [&](Tile &tile)
 	{
-		// LD HL,(nn)
-		Z80_PC(tile) += 3;
 		auto room_addr = tile.DPeek(Z80_PC(tile) - 2);
-		Z80_HL(tile) = tile.DPeek(room_addr);
 
 		if (m_task_completed)
 		{
@@ -127,22 +121,14 @@ void TT_Game::InstallHooks(std::vector<uint8_t> &mem)
 	});
 
 	// After room drawn, turn drawing back on
-	Hook(mem, 0xac05, 0x3e, [&](Tile &tile)
+	Hook(mem, 0xac05, 0x3e /*LD A,n*/, [&](Tile &tile)
 	{
-		// LD A,n
-		Z80_PC(tile) += 2;
-		Z80_A(tile) = 0;
-
 		tile.drawing = true;
 	});
 
 	// Lift floor selection
-	Hook(mem, 0xbace, 0x7e, [&](Tile &tile)
+	Hook(mem, 0xbace, 0x7e /*LD A,(HL)*/, [&](Tile &tile)
 	{
-		// LD A,(HL)
-		Z80_PC(tile) += 1;
-		Z80_A(tile) = tile.mem[Z80_HL(tile)];
-
 		auto &tile_lift = FindRoomTile(LIFT_ROOM);
 		tile_lift.y = (7 - (Z80_B(tile) & 7)) * tile.height;
 		m_pTileView->UpdateTiles();
@@ -150,56 +136,36 @@ void TT_Game::InstallHooks(std::vector<uint8_t> &mem)
 	});
 
 	// Task completed
-	Hook(mem, 0xb373, 0x7e, [&](Tile &tile)
+	Hook(mem, 0xb373, 0x7e /*LD A,(HL)*/, [&](Tile &tile)
 	{
-		// LD A,(HL)
-		Z80_PC(tile) += 1;
-		Z80_A(tile) = tile.mem[Z80_HL(tile)];
-
 		m_task_completed = true;
 	});
 
 	// Drawing Ted
-	Hook(mem, 0xbd89, 0xcd, [&](Tile &tile)
+	Hook(mem, 0xbd89, 0xcd /*CALL nn*/, [&](Tile &tile)
 	{
-		// CALL nn
-		Z80_PC(tile) += 3;
-
-		if (IsActiveTile(tile))
-			Call(tile, tile.DPeek(Z80_PC(tile) - 2));
+		if (!IsActiveTile(tile))
+			Ret(tile);
 	});
 
 	// Stop Ted falling in inactive rooms
-	Hook(mem, 0xbb87, 0x21, [&](Tile &tile)
+	Hook(mem, 0xbb87, 0x21 /*LD HL,nn*/, [&](Tile &tile)
 	{
-		Z80_PC(tile) += 3;
-		Z80_HL(tile) = tile.DPeek(Z80_PC(tile) - 2);
-
 		if (!IsActiveTile(tile))
 			Z80_PC(tile) = 0xbba0;
 	});
 
 	// Stop Ted reacting to travellators in inactive rooms
-	Hook(mem, 0xbcd6, 0x3a, [&](Tile &tile)
+	Hook(mem, 0xbcd6, 0x3a /*LD A,(nn)*/, [&](Tile &tile)
 	{
-		// LD A,(nn)
-		Z80_PC(tile) += 3;
-
-		if (IsActiveTile(tile))
-			Z80_A(tile) = tile.mem[tile.DPeek(Z80_PC(tile) - 2)];
-		else
+		if (!IsActiveTile(tile))
 			Z80_A(tile) = 0;
 	});
 
 	// Make Ted invulnerable in inactive rooms
-	Hook(mem, 0xba84, 0x37, [&](Tile &tile)
+	Hook(mem, 0xba84, 0x37 /*SCF*/, [&](Tile &tile)
 	{
-		Z80_PC(tile) += 1;
-#if 1
-		if (IsActiveTile(tile))
-			Z80_F(tile) |= 1;	// set carry
-		else
-#endif
+		if (!IsActiveTile(tile))
 			Z80_F(tile) &= ~1;	// clear carry
 	});
 }

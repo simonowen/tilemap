@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Z80.h"
 #include "Utils.h"
 
 class Game;
@@ -161,7 +160,7 @@ public:
 	bool IsTileClipped(_In_ const Tile &tile);
 
 private:
-	static constexpr int DEFAULT_ANIMATION_DURATION_MS = 200;
+	static constexpr int DEFAULT_ANIMATION_DURATION_MS = 1000;
 
 	template <typename TData>
 	HRESULT UpdateBuffer(ID3D11Buffer *pBuffer, const TData *buf, size_t buf_size)

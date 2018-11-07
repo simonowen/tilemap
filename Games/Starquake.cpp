@@ -36,12 +36,8 @@ SQ_Game::SQ_Game(std::shared_ptr<TileView> pTileView, bool cheat_pokes)
 void SQ_Game::InstallHooks(std::vector<uint8_t> &mem)
 {
 	// Start of game
-	Hook(mem, 0x672d, 0xcd, [&](Tile &tile)
+	Hook(mem, 0x672d, 0xcd /*CALL nn*/, [&](Tile &tile)
 	{
-		// CALL nn
-		Z80_PC(tile) += 3;
-		Call(tile, tile.DPeek(Z80_PC(tile) - 2));
-
 		if (IsActiveTile(tile))
 		{
 			CloneToAllTiles(tile);
@@ -55,15 +51,11 @@ void SQ_Game::InstallHooks(std::vector<uint8_t> &mem)
 	});
 
 	// Room change CLS
-	Hook(mem, 0xa45f, 0xcd, [&](Tile &tile)
+	Hook(mem, 0xa45f, 0xcd /*CALL nn*/, [&](Tile &tile)
 	{
-		// CALL nn
-		Z80_PC(tile) += 3;
-		auto call_addr = tile.DPeek(Z80_PC(tile) - 2);
-		Call(tile, call_addr);
-
 		auto room_addr = 0xd2c8;
 		auto new_room = tile.DPeek(room_addr);
+
 		if (IsActiveTile(tile) && new_room != tile.room)
 		{
 			auto &tile_new = FindRoomTile(new_room);
@@ -81,69 +73,46 @@ void SQ_Game::InstallHooks(std::vector<uint8_t> &mem)
 	});
 
 	// After room drawn, turn drawing back on
-	Hook(mem, 0xa475, 0xcd, [&](Tile &tile)
+	Hook(mem, 0xa475, 0xcd /*CALL nn*/, [&](Tile &tile)
 	{
-		// CALL nn
-		Z80_PC(tile) += 3;
-		Call(tile, tile.DPeek(Z80_PC(tile) - 2));
-
 		tile.drawing = true;
 	});
 
 	// Call-if-active helper
 	auto call_if_active = [&](Tile &tile)
 	{
-		// CALL nn
-		Z80_PC(tile) += 3;
-		auto call_addr = tile.DPeek(Z80_PC(tile) - 2);
-
-		if (IsActiveTile(tile) || tile.room == CORE_ROOM)
-			Call(tile, call_addr);
+		if (!IsActiveTile(tile) && tile.room != CORE_ROOM)
+			Ret(tile);
 	};
 
 	// Skip sprite drawing and attr painting in inactive rooms
-	Hook(mem, 0xd9cb, 0xcd, call_if_active);
-	Hook(mem, 0xd9ce, 0xcd, call_if_active);
+	Hook(mem, 0xd9cb, 0xcd /*CALL nn*/, call_if_active);
+	Hook(mem, 0xd9ce, 0xcd /*CALL nn*/, call_if_active);
 
 	// Stop BLOB falling in inactive rooms
-	Hook(mem, 0xc74b, 0x32, [&](Tile &tile)
+	Hook(mem, 0xc747, 0x3a /*LD A,(nn)*/, [&](Tile &tile)
 	{
-		// LD (nn),A
-		Z80_PC(tile) += 3;
-		auto data_addr = tile.DPeek(Z80_PC(tile) - 2);
-
-		if (IsActiveTile(tile))
-			tile.mem[data_addr] = Z80_A(tile);
+		if (!IsActiveTile(tile))
+			Z80_PC(tile)++;	// skip SUB (HL)
 	});
 
 	// Immunity from zappers in inactive rooms
-	Hook(mem, 0xc35e, 0x21, [&](Tile &tile)
+	Hook(mem, 0xc35e, 0x21 /*LD HL,nn*/, [&](Tile &tile)
 	{
-		// LD HL,nn
-		Z80_PC(tile) += 3;
-		Z80_HL(tile) = tile.DPeek(Z80_PC(tile) - 2);
-
 		if (!IsActiveTile(tile))
 			Ret(tile);
 	});
 
 	// Immunity from spikes in inactive rooms
-	Hook(mem, 0xcbdd, 0xfe, [&](Tile &tile)
+	Hook(mem, 0xcbdc, 0x7a /*LD A,D*/, [&](Tile &tile)
 	{
-		// CP n + JP NZ,nn
-		Z80_PC(tile) += 5;
-
-		if (IsActiveTile(tile) && Z80_A(tile) != 0)
-			Z80_PC(tile) = tile.DPeek(Z80_PC(tile) - 2);
+		if (!IsActiveTile(tile))
+			Z80_A(tile) = 0;
 	});
 
 	// Sprites bounce indefinitely in inactive core
-	Hook(mem, 0xa774, 0x21, [&](Tile &tile)
+	Hook(mem, 0xa774, 0x21 /*LD HL,nn*/, [&](Tile &tile)
 	{
-		// LD HL,nn
-		Z80_PC(tile) += 3;
-		Z80_HL(tile) = tile.DPeek(Z80_PC(tile) - 2);
-
 		if (!IsActiveTile(tile))
 			Z80_PC(tile) = 0xa759;
 	});

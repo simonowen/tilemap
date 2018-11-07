@@ -31,11 +31,8 @@ JSW_Game::JSW_Game(std::shared_ptr<TileView> pTileView, bool cheat_pokes)
 void JSW_Game::InstallHooks(std::vector<uint8_t> &mem)
 {
 	// Start of game
-	Hook(mem, 0x8905, 0xed, [&](Tile &tile)
+	Hook(mem, 0x88fc, 0x21 /*LD HL,nn*/, [&](Tile &tile)
 	{
-		// LDIR (ignored)
-		Z80_PC(tile) += 2;
-
 		if (IsActiveTile(tile))
 		{
 			BlankScreen(tile);
@@ -47,24 +44,19 @@ void JSW_Game::InstallHooks(std::vector<uint8_t> &mem)
 	});
 
 	// Room change start
-	Hook(mem, 0x8912, 0x3a, [&](Tile &tile)
+	Hook(mem, 0x8912, 0x3a /*LD A,(nn)*/, [&](Tile &tile)
 	{
-		// LD A,(nn)
-		Z80_PC(tile) += 3;
 		auto room_addr = tile.DPeek(Z80_PC(tile) - 2);
+		auto new_room = Z80_A(tile);
 
-		auto new_room = tile.mem[room_addr];
 		if (IsActiveTile(tile) && new_room != tile.room)
 		{
 			auto &tile_new = FindRoomTile(new_room);
 			auto lock = tile_new.Lock();
 
-			if (m_seamless)
-			{
-				// Preserve the current state of the new room so it can be restored.
-				m_entity_data.clear();
-				m_entity_data.insert(m_entity_data.begin(), tile_new.mem.begin() + 0x8100, tile_new.mem.begin() + 0x8140);
-			}
+			// Preserve the current state of the new room so it can be restored.
+			m_entity_data.clear();
+			m_entity_data.insert(m_entity_data.begin(), tile_new.mem.begin() + 0x8100, tile_new.mem.begin() + 0x8140);
 
 			CloneTile(tile, tile_new);
 			Z80_A(tile_new) = tile_new.mem[room_addr] = new_room;
@@ -81,11 +73,8 @@ void JSW_Game::InstallHooks(std::vector<uint8_t> &mem)
 	});
 
 	// Room init (after entity initialisation)
-	Hook(mem, 0x8988, 0xc3, [&](Tile &tile)
+	Hook(mem, 0x8988, 0xc3 /*JP nn*/, [&](Tile &tile)
 	{
-		// JP nn
-		Z80_PC(tile) = tile.DPeek(Z80_PC(tile) + 1);
-
 		if (IsActiveTile(tile) && !m_entity_data.empty())
 		{
 			std::copy(m_entity_data.begin(), m_entity_data.end(), tile.mem.begin() + 0x8100);
@@ -100,43 +89,23 @@ void JSW_Game::InstallHooks(std::vector<uint8_t> &mem)
 	});
 
 	// Room drawing complete
-	Hook(mem, 0x8a3a, 0xcd, [&](Tile &tile)
+	Hook(mem, 0x8a3a, 0xcd /*CALL nn*/, [&](Tile &tile)
 	{
-		// CALL nn
-		Z80_PC(tile) += 3;
-		Call(tile, tile.DPeek(Z80_PC(tile) - 2));
-
 		tile.drawing = true;
 	});
 
 	// Draw main sprite (including collision detection)
-	Hook(mem, 0x95c8, 0x2a, [&](Tile &tile)
+	Hook(mem, 0x95c8, 0x2a /*LD HL,(nn)*/, [&](Tile &tile)
 	{
-		if (IsActiveTile(tile))
-		{
-			Z80_HL(tile) = tile.mem[0x85d3] | (tile.mem[0x85d4] << 8);
-			Z80_PC(tile) += 3;
-		}
-		else
-		{
-			Z80_PC(tile) = tile.mem[Z80_SP(tile)] + (tile.mem[Z80_SP(tile) + 1] << 8);
-			Z80_SP(tile) = Z80_SP(tile) + 2;
-		}
+		if (!IsActiveTile(tile))
+			Ret(tile);
 	});
 
 	// Move Willy (falling)
-	Hook(mem, 0x8dd3, 0x3a, [&](Tile &tile)
+	Hook(mem, 0x8dd3, 0x3a /*LD A,(nn)*/, [&](Tile &tile)
 	{
-		if (IsActiveTile(tile))
-		{
-			Z80_A(tile) = tile.mem[0x85d6];
-			Z80_PC(tile) += 3;
-		}
-		else
-		{
-			Z80_PC(tile) = tile.mem[Z80_SP(tile)] + (tile.mem[Z80_SP(tile) + 1] << 8);
-			Z80_SP(tile) = Z80_SP(tile) + 2;
-		}
+		if (!IsActiveTile(tile))
+			Ret(tile);
 	});
 }
 
@@ -211,136 +180,6 @@ static const std::vector<SparseMapRoom> jsw_map =
 	{ 6,  12,7 },	// Entrance to Hades
 	{ 45, 13,7 },	// Under the Drive
 	{ 46, 14,7 },	// Tree Root
-};
-
-static std::vector<std::wstring> room_names =
-{
-	L"The_Off_Licence",
-	L"The_Bridge",
-	L"Under_the_MegaTree",
-	L"At_the_Foot_of_the_MegaTree",
-	L"The_Drive",
-	L"The_Security_Guard",
-	L"Entrance_to_Hades",
-	L"Cuckoos_Nest",
-	L"Inside_the_MegaTrunk",
-	L"On_a_Branch_Over_the_Drive",
-	L"The_Front_Door",
-	L"The_Hall",
-	L"Tree_Top",
-	L"Out_on_a_limb",
-	L"Rescue_Esmerelda",
-	L"Im_sure_Ive_seen_this_before",
-	L"We_must_perform_a_Quirkafleeg",
-	L"Up_on_the_Battlements",
-	L"On_the_Roof",
-	L"The_Forgotten_Abbey",
-	L"Ballroom_East",
-	L"Ballroom_West",
-	L"To_the_Kitchens____Main_Stairway",
-	L"The_Kitchen",
-	L"West_of_Kitchen",
-	L"Cold_Store",
-	L"East_Wall_Base",
-	L"The_Chapel",
-	L"First_Landing",
-	L"The_Nightmare_Room",
-	L"The_Banyan_Tree",
-	L"Swimming_Pool",
-	L"Halfway_up_the_East_Wall",
-	L"The_Bathroom",
-	L"Top_Landing",
-	L"Master_Bedroom",
-	L"A_bit_of_tree",
-	L"Orangery",
-	L"Priests_Hole",
-	L"Emergency_Generator",
-	L"Dr_Jones_will_never_believe_this",
-	L"The_Attic",
-	L"Under_the_Roof",
-	L"Conservatory_Roof",
-	L"On_top_of_the_house",
-	L"Under_the_Drive",
-	L"Tree_Root",
-	L"BRACKET",
-	L"Nomen_Luni",
-	L"The_Wine_Cellar",
-	L"Watch_Tower",
-	L"Tool__Shed",
-	L"Back_Stairway",
-	L"Back_Door",
-	L"West__Wing",
-	L"West_Bedroom",
-	L"West_Wing_Roof",
-	L"Above_the_West_Bedroom",
-	L"The_Beach",
-	L"The_Yacht",
-	L"The_Bow",
-};
-
-enum RoomName
-{
-	The_Off_Licence,
-	The_Bridge,
-	Under_the_MegaTree,
-	At_the_Foot_of_the_MegaTree,
-	The_Drive,
-	The_Security_Guard,
-	Entrance_to_Hades,
-	Cuckoos_Nest,
-	Inside_the_MegaTrunk,
-	On_a_Branch_Over_the_Drive,
-	The_Front_Door,
-	The_Hall,
-	Tree_Top,
-	Out_on_a_limb,
-	Rescue_Esmerelda,
-	Im_sure_Ive_seen_this_before,
-	We_must_perform_a_Quirkafleeg,
-	Up_on_the_Battlements,
-	On_the_Roof,
-	The_Forgotten_Abbey,
-	Ballroom_East,
-	Ballroom_West,
-	To_the_Kitchens____Main_Stairway,
-	The_Kitchen,
-	West_of_Kitchen,
-	Cold_Store,
-	East_Wall_Base,
-	The_Chapel,
-	First_Landing,
-	The_Nightmare_Room,
-	The_Banyan_Tree,
-	Swimming_Pool,
-	Halfway_up_the_East_Wall,
-	The_Bathroom,
-	Top_Landing,
-	Master_Bedroom,
-	A_bit_of_tree,
-	Orangery,
-	Priests_Hole,
-	Emergency_Generator,
-	Dr_Jones_will_never_believe_this,
-	The_Attic,
-	Under_the_Roof,
-	Conservatory_Roof,
-	On_top_of_the_house,
-	Under_the_Drive,
-	Tree_Root,
-	BRACKET,
-	Nomen_Luni,
-	The_Wine_Cellar,
-	Watch_Tower,
-	Tool__Shed,
-	Back_Stairway,
-	Back_Door,
-	West__Wing,
-	West_Bedroom,
-	West_Wing_Roof,
-	Above_the_West_Bedroom,
-	The_Beach,
-	The_Yacht,
-	The_Bow
 };
 
 std::vector<MapRoom> JSW_Game::BuildMap(const std::vector<uint8_t> &mem)

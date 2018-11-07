@@ -33,12 +33,8 @@ DD2_Game::DD2_Game(std::shared_ptr<TileView> pTileView, bool cheat_pokes)
 void DD2_Game::InstallHooks(std::vector<uint8_t> &mem)
 {
 	// Start of game
-	Hook(mem, 0x7253, 0x21, [&](Tile &tile)
+	Hook(mem, 0x7253, 0x21 /*LD HL,nn*/, [&](Tile &tile)
 	{
-		// LD HL,nn
-		Z80_PC(tile) += 3;
-		Z80_HL(tile) = tile.DPeek(Z80_HL(tile) - 2);
-
 		std::unique_lock<std::mutex> lock(Tile::shared_lock, std::defer_lock);
 		if (lock.try_lock())
 		{
@@ -51,15 +47,8 @@ void DD2_Game::InstallHooks(std::vector<uint8_t> &mem)
 	});
 
 	// Airship moving
-	Hook(mem, 0xf8e6, 0x1c, [&](Tile &tile)
+	Hook(mem, 0xf8e6, 0x1c /*INC E*/, [&](Tile &tile)
 	{
-		// INC E
-		Z80_PC(tile)++;
-		Z80_E(tile)++;
-
-		auto de = (((int)(char)Z80_D(tile)) * 8) + ((Z80_E(tile) - 1) * 2);
-		auto offset_x = 78 - de;
-
 		auto airship_x = 78 - ((((int)(char)Z80_D(tile)) * 8) + ((Z80_E(tile) - 1) * 2));
 		auto airship_island = NUM_ISLANDS - tile.mem[0x5bda];
 		auto arrival_room = mem[0x818a + (NUM_ISLANDS - airship_island)];
@@ -75,12 +64,8 @@ void DD2_Game::InstallHooks(std::vector<uint8_t> &mem)
 	});
 
 	// Entering room
-	Hook(mem, 0x6d00, 0x21, [&](Tile &tile)
+	Hook(mem, 0x6d00, 0x21 /*LD HL,nn*/, [&](Tile &tile)
 	{
-		// LD HL,nn
-		Z80_PC(tile) += 3;
-		Z80_HL(tile) = tile.DPeek(Z80_PC(tile) - 2);
-
 		auto new_room = Z80_A(tile);
 		if (IsActiveTile(tile) && new_room != tile.room)
 		{
@@ -99,50 +84,32 @@ void DD2_Game::InstallHooks(std::vector<uint8_t> &mem)
 	});
 
 	// Suppress Dan redraw after room is redrawn
-	Hook(mem, 0x7c2e, 0xe5, [&](Tile &tile)
+	Hook(mem, 0x7c2e, 0xe5 /*PUSH HL*/, [&](Tile &tile)
 	{
-		// PUSH HL
-		Z80_PC(tile)++;
-
-		if (IsActiveTile(tile))
-			Push(tile, Z80_HL(tile));
-		else
+		if (!IsActiveTile(tile))
+		{
+			Pop(tile);
 			Ret(tile);
+		}
 
 		tile.drawing = true;
 	});
 
-	// Suppress Dan actions (drawing, falling, ...) in inactive rooms
-	Hook(mem, 0x78ed, 0xdd, [&](Tile &tile)
+	// Return-if-inactive helper.
+	auto ret_if_inactive = [&](Tile &tile)
 	{
-		// LD IX,nn
-		Z80_PC(tile) += 4;
-		Z80_IX(tile) = tile.DPeek(Z80_PC(tile) - 2);
-
 		if (!IsActiveTile(tile))
 			Ret(tile);
-	});
+	};
+
+	// Suppress Dan actions (drawing, falling, ...) in inactive rooms
+	Hook(mem, 0x78ed, 0xdd /*LD IX,nn*/, ret_if_inactive);
 
 	// Hide enemies in inactive rooms
-	Hook(mem, 0x7368, 0x3a, [&](Tile &tile)
-	{
-		Z80_PC(tile) += 3;
-		Z80_A(tile) = tile.mem[0x5bd9];
-
-		if (!IsActiveTile(tile))
-			Ret(tile);
-	});
+	Hook(mem, 0x7368, 0x3a /*LD A,(nn)*/, ret_if_inactive);
 
 	// Hide Blitzen in inactive rooms
-	Hook(mem, 0x8192, 0xfd, [&](Tile &tile)
-	{
-		// LD IY,nn
-		Z80_PC(tile) += 4;
-		Z80_IY(tile) = tile.DPeek(Z80_PC(tile) - 2);
-
-		if (!IsActiveTile(tile))
-			Ret(tile);
-	});
+	Hook(mem, 0x8192, 0xfd /*LD IY,nn*/, ret_if_inactive);
 }
 
 std::vector<MapRoom> DD2_Game::BuildMap(const std::vector<uint8_t> &mem)

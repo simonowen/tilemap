@@ -1,7 +1,8 @@
 #pragma once
 
 #include "Game.h"
-#include "Z80.h"
+
+const uint8_t BREAKPOINT_OPCODE = 0x64;	// LD H,H
 
 constexpr unsigned SPECTRUM_SCREEN_BYTES = 6912;
 constexpr int SPECTRUM_WIDTH_PIXELS = 256;
@@ -34,6 +35,7 @@ const int SPECTRUM_CYCLES_BEFORE_INT = SPECTRUM_CYCLES_PER_FRAME - SPECTRUM_CYCL
 #define Z80_IYL(t)  Z_Z80_STATE_IYL(&(t).z80.state)
 #define Z80_I(t)    Z_Z80_STATE_I(&(t).z80.state)
 #define Z80_R(t)    Z_Z80_STATE_R(&(t).z80.state)
+#define Z80_CYCLES(t)	((t).z80.cycles)
 #define Z80_STATE(t)	((t).z80.state)
 
 inline void Push(Tile &tile, uint16_t value)
@@ -83,26 +85,51 @@ public:
 		mem[address] = value;
 	}
 
-		void Hook(std::vector<uint8_t> &mem, uint16_t address, uint8_t expected_opcode, HookFunction fn)
+	void Hook(std::vector<uint8_t> &mem, uint16_t address, uint8_t expected_opcode, HookFunction fn)
 	{
-		const uint8_t BREAKPOINT_OPCODE = 0x64;	// LD H,H
-
 		if (mem[address] != expected_opcode)
 			throw std::exception("snapshot is incompatible with code hooks");	// TODO: show location and expected/found byte
 
+		HookData new_hook{};
+		new_hook.func = fn;
+		new_hook.orig_opcode = expected_opcode;
+
 		mem[address] = BREAKPOINT_OPCODE;
-		m_hooks[address] = fn;
+		m_hooks[address] = new_hook;
 	}
 
 	void OnHook(uint16_t address, Tile &tile)
 	{
-		auto cpu = &tile.z80.state;
 		auto it = m_hooks.find(address);
 
 		if (it != m_hooks.end())
-			(it->second)(tile);
+		{
+			const auto &hook = it->second;
+
+			// Unhook
+			tile.mem[address] = hook.orig_opcode;
+
+			// Single-step the hooked instruction
+			auto old_cycles = Z80_CYCLES(tile);
+			z80_run(&tile.z80, 1);
+			Z80_CYCLES(tile) += old_cycles;
+
+			// Re-hook
+			tile.mem[address] = BREAKPOINT_OPCODE;
+
+			// Fail hooking of unusual instructions, including block repeats.
+			if (Z80_PC(tile) == address)
+				throw std::exception("PC didn't advance during hook single-step");
+
+			// Call the hook handler
+			hook.func(tile);
+		}
 		else
+		{
+			// Real LD H,H encountered, so step past it
 			Z80_PC(tile)++;
+			Z80_CYCLES(tile) += 4;
+		}
 	}
 
 	void RunFrame() override final;

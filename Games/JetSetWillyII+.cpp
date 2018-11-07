@@ -30,12 +30,8 @@ JSW2_Game::JSW2_Game(std::shared_ptr<TileView> pTileView, bool cheat_pokes)
 void JSW2_Game::InstallHooks(std::vector<uint8_t> &mem)
 {
 	// Start of game from menu
-	Hook(mem, 0x7959, 0xcd, [&](Tile &tile)
+	Hook(mem, 0x7959, 0xcd /*CALL nn*/, [&](Tile &tile)
 	{
-		// CALL nn
-		Z80_PC(tile) += 3;
-		Call(tile, tile.DPeek(Z80_PC(tile) - 2));
-
 		if (IsActiveTile(tile))
 		{
 			BlankScreen(tile);
@@ -47,19 +43,18 @@ void JSW2_Game::InstallHooks(std::vector<uint8_t> &mem)
 	});
 
 	// Room change
-	Hook(mem, 0x7991, 0x32, [&](Tile &tile)
+	Hook(mem, 0x7991, 0x32 /*LD (nn),A*/, [&](Tile &tile)
 	{
-		// LD (nn),A
-		Z80_PC(tile) += 3;
-
+		auto room_addr = tile.DPeek(Z80_PC(tile) - 2);
 		auto new_room = Z80_A(tile);
+
 		if (IsActiveTile(tile) && new_room != tile.room)
 		{
 			auto &tile_new = FindRoomTile(new_room);
 			auto lock = tile_new.Lock();
 
 			CloneTile(tile, tile_new);
-			Z80_A(tile_new) = tile_new.mem[0x5082] = new_room;
+			Z80_A(tile_new) = tile_new.mem[room_addr] = new_room;
 
 			// Don't get stuck in Experiment X wall due to closer room entry!
 			if (tile_new.room == 139 && tile_new.mem[0x5080] == 1)
@@ -69,16 +64,13 @@ void JSW2_Game::InstallHooks(std::vector<uint8_t> &mem)
 			tile_new.drawing = false;
 		}
 
-		Z80_A(tile) = tile.mem[0x5082] = tile.room;
+		Z80_A(tile) = tile.mem[room_addr] = tile.room;
 		tile.drawing = false;
 	});
 
 	// Room drawing complete
-	Hook(mem, 0x799d, 0xcd, [&](Tile &tile)
+	Hook(mem, 0x799d, 0xcd /*CALL nn*/, [&](Tile &tile)
 	{
-		// CALL nn
-		Z80_PC(tile) += 3;
-
 		// Update the Cartography Room map if it's not the current room.
 		if (IsActiveTile(tile) && tile.room != CARTOGRAPHY_ROOM)
 		{
@@ -91,20 +83,18 @@ void JSW2_Game::InstallHooks(std::vector<uint8_t> &mem)
 			td_cart.drawing = false;
 		}
 
-		Call(tile, tile.DPeek(Z80_PC(tile) - 2));
 		tile.drawing = true;
 	});
 
 	// Call to core game logic
-	Hook(mem, 0x7a07, 0xcd, [&](Tile &tile)
+	Hook(mem, 0x7a07, 0xcd /*CALL nn*/, [&](Tile &tile)
 	{
-		// CALL nn
-		Z80_PC(tile) += 3;
-
-		if (IsActiveTile(tile))
-			Call(tile, tile.DPeek(Z80_PC(tile) - 2));
-		else
+		if (!IsActiveTile(tile))
 		{
+			// Undo CALL
+			Ret(tile);
+
+			// Position Willy at left edge to stop Eureka animation.
 			tile.mem[0x5080] = 0x08;
 
 			// Demo loop, with calls in reverse order due to stacking!
