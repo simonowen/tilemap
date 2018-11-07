@@ -103,9 +103,9 @@ void SpectrumGame::RunFrame()
 				{
 					tile.frame_cycles = 0;	// TODO: test if still needed
 					tile.frame_cycles += z80_run(&tile.z80, SPECTRUM_CYCLES_BEFORE_INT);
-					z80_int(&tile.z80, ON);
+					z80_int(&tile.z80, true);
 					tile.frame_cycles += z80_run(&tile.z80, SPECTRUM_CYCLES_PER_INT);
-					z80_int(&tile.z80, OFF);
+					z80_int(&tile.z80, false);
 					tile.frame_cycles -= SPECTRUM_CYCLES_PER_FRAME;
 
 					if (tile.drawing)

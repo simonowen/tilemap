@@ -73,6 +73,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Z80-support.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
     <ClInclude Include="Z80.h">
       <Filter>Source Files</Filter>
     </ClInclude>
