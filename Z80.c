@@ -1,22 +1,21 @@
-/* Zilog Z80 CPU Emulator
-  ____    ____    ___ ___     ___
- / __ \  / ___\  / __` __`\  / __`\
-/\ \/  \/\ \__/_/\ \/\ \/\ \/\  __/
-\ \__/\_\ \_____\ \_\ \_\ \_\ \____\
- \/_/\/_/\/_____/\/_/\/_/\/_/\/____/
+/*  ______   ______  ______
+   /\___  \ /\  __ \/\     \
+   \/__/  /_\ \  __ \ \  \  \
+      /\_____\ \_____\ \_____\
+Zilog \/_____/\/_____/\/_____/ CPU Emulator
 Copyright (C) 1999-2018 Manuel Sainz de Baranda y Goñi.
 
-This library  is free software: you  can redistribute it and/or  modify it under
-the terms of  the GNU General Public  License as published by  the Free Software
-Foundation,  either version  3 of  the License,  or (at  your option)  any later
+This emulator is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published  by the Free Software
+Foundation, either  version 3 of  the License, or  (at your option)  any later
 version.
 
-This library is distributed in the hope  that it will be useful, but WITHOUT ANY
-WARRANTY; without even the implied warranty  of MERCHANTABILITY or FITNESS FOR A
-PARTICULAR PURPOSE. See the GNU General Public License for more details.
+This emulator is distributed  in the hope that it will  be useful, but WITHOUT
+ANY WARRANTY; without even the  implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
-You should  have received a  copy of the GNU  General Public License  along with
-this library. If not, see <http://www.gnu.org/licenses/>. */
+You should have received  a copy of the GNU General Public License  along with
+this emulator. If not, see <http://www.gnu.org/licenses/>. */
 
 #include <Z/macros/value.h>
 #include <Z/macros/pointer.h>
@@ -29,12 +28,18 @@ this library. If not, see <http://www.gnu.org/licenses/>. */
 #	define CPU_Z80_API Z_API_EXPORT
 #endif
 
-#if defined(CPU_Z80_HIDE_ABI)
-#	define CPU_Z80_ABI static
-#elif defined(CPU_Z80_STATIC)
-#	define CPU_Z80_ABI
-#else
-#	define CPU_Z80_ABI Z_API_EXPORT
+#if defined(CPU_Z80_WITH_MODULE_ABI) && !defined(CPU_Z80_WITH_ABI)
+#	define CPU_Z80_WITH_ABI
+#endif
+
+#ifdef CPU_Z80_WITH_ABI
+#	if defined(CPU_Z80_HIDE_ABI)
+#		define CPU_Z80_ABI static
+#	elif defined(CPU_Z80_STATIC)
+#		define CPU_Z80_ABI
+#	else
+#		define CPU_Z80_ABI Z_API_EXPORT
+#	endif
 #endif
 
 #if defined(CPU_Z80_USE_LOCAL_HEADER)
@@ -66,8 +71,6 @@ typedef zuint8 (* Instruction)(Z80 *object);
 #define READ_OFFSET(address)	((zsint8)READ_8(address))
 #define SET_HALT		if (object->halt != NULL) object->halt(object->context, TRUE )
 #define CLEAR_HALT		if (object->halt != NULL) object->halt(object->context, FALSE)
-#define HOOK(address)	if (object->hook != NULL) object->hook(object->context, (address))	// SNO
-
 
 
 static Z_INLINE zuint16 read_16bit(Z80 *object, zuint16 address)
@@ -81,7 +84,7 @@ static Z_INLINE void write_16bit(Z80 *object, zuint16 address, zuint16 value)
 	}
 
 
-#define READ_16( address)	 read_16bit (object, (zuint16)(address))
+#define READ_16(address)	 read_16bit (object, (zuint16)(address))
 #define WRITE_16(address, value) write_16bit(object, (zuint16)(address), (zuint16)(value))
 
 
@@ -99,7 +102,6 @@ static Z_INLINE void write_16bit(Z80 *object, zuint16 address, zuint16 value)
 #define BC_   object->state.Z_Z80_STATE_MEMBER_BC_
 #define DE_   object->state.Z_Z80_STATE_MEMBER_DE_
 #define HL_   object->state.Z_Z80_STATE_MEMBER_HL_
-
 #define A     object->state.Z_Z80_STATE_MEMBER_A
 #define F     object->state.Z_Z80_STATE_MEMBER_F
 #define B     object->state.Z_Z80_STATE_MEMBER_B
@@ -110,32 +112,28 @@ static Z_INLINE void write_16bit(Z80 *object, zuint16 address, zuint16 value)
 #define R_ALL ((R & 127) | (R7 & 128))
 
 
-/* MARK: - Macros: Internal State */
+/* MARK: - Macros: Internal Bits */
 
-#define R7     object->r7
-#define HALT   object->state.Z_Z80_STATE_MEMBER_HALT
-#define IFF1   object->state.Z_Z80_STATE_MEMBER_IFF1
-#define IFF2   object->state.Z_Z80_STATE_MEMBER_IFF2
-#define EI     object->state.Z_Z80_STATE_MEMBER_EI
-#define IM     object->state.Z_Z80_STATE_MEMBER_IM
-#define NMI    object->state.Z_Z80_STATE_MEMBER_NMI
-#define INT    object->state.Z_Z80_STATE_MEMBER_IRQ
-#define CYCLES object->cycles
+#define HALT object->state.Z_Z80_STATE_MEMBER_HALT
+#define IFF1 object->state.Z_Z80_STATE_MEMBER_IFF1
+#define IFF2 object->state.Z_Z80_STATE_MEMBER_IFF2
+#define EI   object->state.Z_Z80_STATE_MEMBER_EI
+#define IM   object->state.Z_Z80_STATE_MEMBER_IM
+#define NMI  object->state.Z_Z80_STATE_MEMBER_NMI
+#define INT  object->state.Z_Z80_STATE_MEMBER_IRQ
 
 
-/* MARK: - Macros: Cached Instruction Data */
+/* MARK: - Macros: Temporal Data */
 
+#define CYCLES	    object->cycles
+#define R7	    object->r7
 #define BYTE(index) object->data.array_uint8[index]
 #define BYTE0	    BYTE(0)
 #define BYTE1	    BYTE(1)
 #define BYTE2	    BYTE(2)
 #define BYTE3	    BYTE(3)
-
-
-/* MARK: - Macros: Memory Addressing */
-
-#define XY	   object->xy.value_uint16
-#define XY_ADDRESS ((zuint16)(XY + object->data.array_sint8[2]))
+#define XY	    object->xy.value_uint16
+#define XY_ADDRESS  ((zuint16)(XY + object->data.array_sint8[2]))
 
 
 /* MARK: - Macros: Flags */
@@ -151,7 +149,7 @@ static Z_INLINE void write_16bit(Z80 *object, zuint16 address, zuint16 value)
 
 #define SZPF (SF | ZF | PF)
 #define SYXF (SF | YF | XF)
-#define ZPF  (ZF | PF     )
+#define ZPF  (ZF | PF	  )
 #define YXCF (YF | XF | CF)
 #define YXF  (YF | XF	  )
 #define PNF  (PF | NF	  )
@@ -1283,7 +1281,6 @@ INSTRUCTION(FD);
 INSTRUCTION(XY_CB);
 INSTRUCTION(ED_illegal);
 INSTRUCTION(XY_illegal);
-INSTRUCTION(hook);	// SNO
 
 
 /* MARK: - Instruction Function Tables */
@@ -1296,7 +1293,7 @@ static Instruction const instruction_table[256] = {
 /* 3 */ jr_Z_OFFSET, ld_SS_WORD, ld_vWORD_a,  inc_SS,	   V_vhl,	V_vhl,	  ld_vhl_BYTE, scf,	 jr_Z_OFFSET, add_hl_SS, ld_a_vWORD,  dec_SS,	 V_X,	      V_X,	 ld_X_BYTE, ccf,
 /* 4 */ ld_X_Y,	     ld_X_Y,	 ld_X_Y,      ld_X_Y,	   ld_X_Y,	ld_X_Y,	  ld_X_vhl,    ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_vhl,  ld_X_Y,
 /* 5 */ ld_X_Y,	     ld_X_Y,	 ld_X_Y,      ld_X_Y,	   ld_X_Y,	ld_X_Y,	  ld_X_vhl,    ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_vhl,  ld_X_Y,
-/* 6 */ ld_X_Y,	     ld_X_Y,	 ld_X_Y,      ld_X_Y,	   hook/*SNO*/,	ld_X_Y,	  ld_X_vhl,    ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_vhl,  ld_X_Y,
+/* 6 */ ld_X_Y,	     ld_X_Y,	 ld_X_Y,      ld_X_Y,	   ld_X_Y,	ld_X_Y,	  ld_X_vhl,    ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_vhl,  ld_X_Y,
 /* 7 */ ld_vhl_Y,    ld_vhl_Y,	 ld_vhl_Y,    ld_vhl_Y,	   ld_vhl_Y,	ld_vhl_Y, halt,	       ld_vhl_Y, ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_Y,      ld_X_Y,	 ld_X_vhl,  ld_X_Y,
 /* 8 */ U_a_Y,	     U_a_Y,	 U_a_Y,	      U_a_Y,	   U_a_Y,	U_a_Y,	  U_a_vhl,     U_a_Y,	 U_a_Y,	      U_a_Y,	 U_a_Y,	      U_a_Y,	 U_a_Y,	      U_a_Y,	 U_a_vhl,   U_a_Y,
 /* 9 */ U_a_Y,	     U_a_Y,	 U_a_Y,	      U_a_Y,	   U_a_Y,	U_a_Y,	  U_a_vhl,     U_a_Y,	 U_a_Y,	      U_a_Y,	 U_a_Y,	      U_a_Y,	 U_a_Y,	      U_a_Y,	 U_a_vhl,   U_a_Y,
@@ -1420,7 +1417,6 @@ INSTRUCTION(XY_CB)
 INSTRUCTION(XY_illegal) {PC += 1; return instruction_table[BYTE0 = BYTE1](object) + 4;}
 INSTRUCTION(ED_illegal) {PC += 2; return 8;}
 
-INSTRUCTION(hook) {HOOK(PC); return 0;}	// SNO
 
 /* MARK: - Main Functions */
 
@@ -1526,10 +1522,6 @@ CPU_Z80_API zusize z80_run(Z80 *object, zusize cycles)
 			R++;		 /* Consume memory refresh.	*/
 			IFF1 = IFF2 = 0; /* Clear interrupt flip-flops.	*/
 
-#			if defined(CPU_Z80_AUTOCLEAR_INT_LINE)
-				INT = FALSE;
-#			endif
-
 			switch (IM)
 				{
 				/*------------------------------.
@@ -1611,7 +1603,7 @@ CPU_Z80_API void z80_int(Z80 *object, zboolean state) {INT = state;}
 
 /* MARK: - ABI */
 
-#if defined(CPU_Z80_BUILD_ABI) || defined(CPU_Z80_BUILD_MODULE_ABI)
+#ifdef CPU_Z80_WITH_ABI
 
 	static void will_read_state(Z80 *object) {R  = R_ALL;}
 	static void did_write_state(Z80 *object) {R7 = R;    }
@@ -1632,8 +1624,7 @@ CPU_Z80_API void z80_int(Z80 *object, zboolean state) {INT = state;}
 		{Z_EMULATOR_FUNCTION_IN_8BIT,	 O(in	   )},
 		{Z_EMULATOR_FUNCTION_OUT_8BIT,	 O(out	   )},
 		{Z_EMULATOR_FUNCTION_IRQ_DATA,	 O(int_data)},
-		{Z_EMULATOR_FUNCTION_HALT,		 O(halt	   )},
-		{Z_EMULATOR_FUNCTION_HOOK,		 O(hook    )}	// SNO
+		{Z_EMULATOR_FUNCTION_HALT,	 O(halt	   )}
 	};
 
 	CPU_Z80_ABI ZCPUEmulatorABI const abi_emulation_cpu_z80 = {
@@ -1650,7 +1641,7 @@ CPU_Z80_API void z80_int(Z80 *object, zboolean state) {INT = state;}
 
 #endif
 
-#if defined(CPU_Z80_BUILD_MODULE_ABI)
+#ifdef CPU_Z80_WITH_MODULE_ABI
 
 #	include <Z/ABIs/generic/module.h>
 
