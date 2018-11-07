@@ -33,11 +33,13 @@
 #	define Z_API_EXPORT        __declspec(dllexport)
 #	define Z_STRICT_SIZE_BEGIN __pragma(pack(push, 1))
 #	define Z_STRICT_SIZE_END   __pragma(pack(pop))
+#	define Z_INLINE		   __forceinline
 #else
 #	define Z_API
 #	define Z_API_EXPORT
 #	define Z_STRICT_SIZE_BEGIN
 #	define Z_STRICT_SIZE_END   __attribute__((packed))
+#	define Z_INLINE            __inline__ __attribute__((always_inline))
 #endif
 
 #ifdef ofsetof
@@ -45,6 +47,20 @@
 #else
 #	define Z_OFFSET_OF(type, member) (((size_t)&((type *)(1))->member) - 1)
 #endif
+
+#ifdef __cplusplus
+#	define Z_C_SYMBOLS_BEGIN extern "C" {
+#	define Z_C_SYMBOLS_END	 }
+#else
+#	define Z_C_SYMBOLS_BEGIN
+#	define Z_C_SYMBOLS_END
+#endif
+
+
+/* <Z/macros/pasting.h> */
+
+#define Z_EMPTY_(dummy)
+#define Z_EMPTY Z_EMPTY_(.)
 
 
 /* <Z/macros/pointer.h> */
@@ -74,6 +90,8 @@
 
 #if (defined(_WIN64) || defined(_WIN32)) && defined(_MSC_VER)
 
+#	define Z_UINT32(value) value##U
+
 #	if _MSC_VER < 1300
 		typedef unsigned char      zuint8;
 		typedef unsigned short int zuint16;
@@ -89,9 +107,7 @@
 		typedef signed __int16   zsint16t;
 		typedef signed __int32   zsint32t;
 #	endif
-
 #else
-
 #	include <stdint.h>
 
 	typedef uint8_t  zuint8;
@@ -101,9 +117,13 @@
 	typedef int16_t  zsint16;
 	typedef int32_t  zsint32;
 
+#	define Z_UINT32 UINT32_C
 #endif
 
-typedef size_t zusize;
+typedef unsigned int zuint;
+typedef signed int   zsint;
+typedef size_t       zusize;
+typedef zuint8       zboolean;
 
 Z_DEFINE_STRICT_UNION_BEGIN
 	zuint16 value_uint16;
@@ -162,7 +182,7 @@ Z_DEFINE_STRICT_UNION_END Z32Bit;
 #define Z_Z80_VALUE_AFTER_POWER_ON_HL     0xFFFF
 #define Z_Z80_VALUE_AFTER_POWER_ON_IX     0xFFFF
 #define Z_Z80_VALUE_AFTER_POWER_ON_IY     0xFFFF
-#define Z_Z80_VALUE_AFTER_POWER_ON_AF     0xFFFF
+#define Z_Z80_VALUE_AFTER_POWER_ON_AF_    0xFFFF
 #define Z_Z80_VALUE_AFTER_POWER_ON_BC_    0xFFFF
 #define Z_Z80_VALUE_AFTER_POWER_ON_DE_    0xFFFF
 #define Z_Z80_VALUE_AFTER_POWER_ON_HL_    0xFFFF
@@ -263,7 +283,7 @@ Z_DEFINE_STRICT_STRUCTURE_END ZZ80State;
 #define Z_Z80_STATE_MEMBER_IY     iy.value_uint16
 #define Z_Z80_STATE_MEMBER_PC     pc
 #define Z_Z80_STATE_MEMBER_SP     sp
-#define Z_Z80_STATE_MEMBER_AF     af_.value_uint16
+#define Z_Z80_STATE_MEMBER_AF_    af_.value_uint16
 #define Z_Z80_STATE_MEMBER_BC_    bc_.value_uint16
 #define Z_Z80_STATE_MEMBER_DE_    de_.value_uint16
 #define Z_Z80_STATE_MEMBER_HL_    hl_.value_uint16

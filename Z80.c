@@ -17,8 +17,10 @@ FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 You should have received  a copy of the GNU General Public License  along with
 this emulator. If not, see <http://www.gnu.org/licenses/>. */
 
-#include <Z/macros/value.h>
-#include <Z/macros/pointer.h>
+#ifndef CPU_Z80_DEPENDENCIES_H
+#	include <Z/macros/value.h>
+#	include <Z/macros/pointer.h>
+#endif
 
 #if defined(CPU_Z80_HIDE_API)
 #	define CPU_Z80_API static
