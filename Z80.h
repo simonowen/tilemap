@@ -20,11 +20,13 @@ this emulator. If not, see <http://www.gnu.org/licenses/>. */
 #ifndef _emulation_CPU_Z80_H_
 #define _emulation_CPU_Z80_H_
 
-#ifdef CPU_Z80_DEPENDENCIES_H
+#include "Z80-support.h"
+
+/*#ifdef CPU_Z80_DEPENDENCIES_H
 #	include CPU_Z80_DEPENDENCIES_H
 #else
 #	include <Z/hardware/CPU/architecture/Z80.h>
-#endif
+#endif*/
 
 /** Z80 emulator instance.
   * @details This structure contains the state of the emulated CPU and callback

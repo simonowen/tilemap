@@ -1,7 +1,9 @@
 #ifndef _Z80_support_H
 #define _Z80_support_H
 
-#define CPU_Z80_STATIC
+#ifndef CPU_Z80_STATIC
+#	define CPU_Z80_STATIC
+#endif
 
 #include <stddef.h>
 
@@ -30,12 +32,12 @@
 #if (defined(_WIN64) || defined(_WIN32)) && defined(_MSC_VER)
 
 #	if _MSC_VER < 1300
-		typedef unsigned char	   zuint8;
+		typedef unsigned char      zuint8;
 		typedef unsigned short int zuint16;
-		typedef unsigned int	   zuint32;
-		typedef signed char	   zsint8;
+		typedef unsigned int       zuint32;
+		typedef signed char        zsint8;
 		typedef signed short int   zsint16;
-		typedef signed int	   zsint32;
+		typedef signed int         zsint32;
 #	else
 		typedef unsigned __int8  zuint8;
 		typedef unsigned __int16 zuint16t;
@@ -141,10 +143,10 @@ typedef size_t zusize;
 #define Z_Z80_RESET_IS_EQUAL_TO_POWER_ON TRUE
 
 Z_DEFINE_STRICT_STRUCTURE_BEGIN
-	zuint16	pc,  sp;
-	Z16Bit	af,  bc,  de,  hl,  ix, iy;
-	Z16Bit	af_, bc_, de_, hl_;
-	zuint8	r,   i;
+	zuint16 pc,  sp;
+	Z16Bit  af,  bc,  de,  hl,  ix, iy;
+	Z16Bit  af_, bc_, de_, hl_;
+	zuint8  r,   i;
 
 	zuint16 memptr;
 
