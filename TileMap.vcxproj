@@ -84,7 +84,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
-      <PreprocessorDefinitions>WIN32;CPU_Z80_USE_LOCAL_HEADER;Z_DATA_MODEL=Z_DATA_MODEL_LP32;Z_CPU_ARCHITECTURE=Z_CPU_ARCHITECTURE_X86_32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;CPU_Z80_USE_LOCAL_HEADER;CPU_Z80_DEPENDENCIES_H="Z80-support.h";NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
