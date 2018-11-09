@@ -256,6 +256,7 @@
     <ClCompile Include="Games\DynamiteDanII.cpp" />
     <ClCompile Include="Games\JetSetWilly.cpp" />
     <ClCompile Include="Games\JetSetWillyII+.cpp" />
+    <ClCompile Include="Games\SabreWulf.cpp" />
     <ClCompile Include="Games\Spindizzy.cpp" />
     <ClCompile Include="Games\Starquake.cpp" />
     <ClCompile Include="Games\Test.cpp" />
@@ -373,6 +374,7 @@
     <ClInclude Include="Games\DynamiteDanII.h" />
     <ClInclude Include="Games\JetSetWilly.h" />
     <ClInclude Include="Games\JetSetWillyII+.h" />
+    <ClInclude Include="Games\SabreWulf.h" />
     <ClInclude Include="Games\Spindizzy.h" />
     <ClInclude Include="Games\Starquake.h" />
     <ClInclude Include="Games\Test.h" />

@@ -23,7 +23,11 @@ std::vector<uint8_t> FileContents(const std::wstring &filename)
 {
 	HANDLE hfile = CreateFile(filename.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
 	if (hfile == INVALID_HANDLE_VALUE)
-		throw std::runtime_error("File not found!");
+	{
+		auto str = "File not found: " + to_string(filename) +
+			"\n\nYou must provide your own copy of this file as it can't be distributed with TileMap.";
+		throw std::runtime_error(str);
+	}
 
 	DWORD dwSize = GetFileSize(hfile, NULL), dwRead;
 	std::vector<BYTE> file(dwSize);

@@ -24,6 +24,8 @@
 #include <chrono>
 #include <shared_mutex>
 #include <sstream>
+#include <locale>
+#include <codecvt>
 
 #include <wrl/client.h>
 using Microsoft::WRL::ComPtr;

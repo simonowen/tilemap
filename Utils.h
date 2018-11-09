@@ -19,6 +19,20 @@ T lerp(float t, T a, T b)
 
 uint32_t random_uint32();
 
+inline std::wstring to_wstring(const std::string &str)
+{
+	using convert_typeX = std::codecvt_utf8<wchar_t>;
+	std::wstring_convert<convert_typeX, wchar_t> conv;
+	return conv.from_bytes(str);
+}
+
+inline std::string to_string(const std::wstring &wstr)
+{
+	using convert_typeX = std::codecvt_utf8<wchar_t>;
+	std::wstring_convert<convert_typeX, wchar_t> conv;
+	return conv.to_bytes(wstr);
+}
+
 template <typename T>
 class EasedValue
 {

@@ -1,4 +1,4 @@
-// Dynamite Dan
+// Dynamite Dan (48 rooms)
 //
 // ToDo:
 //	- seamless mode for creatures
