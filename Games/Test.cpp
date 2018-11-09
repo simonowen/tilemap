@@ -6,7 +6,7 @@
 Test_Game::Test_Game(std::shared_ptr<TileView> pTileView, bool /*cheat_pokes*/)
 : SpectrumGame(pTileView, START_ROOM)
 {
-	auto &mem = load_snapshot(L"tesdt.sna");
+	auto &mem = load_snapshot(L"test.sna");
 	SetMap(BuildMap(mem));
 	pTileView->SetPanels({ { 0, TILE_HEIGHT - PANEL_HEIGHT, TILE_WIDTH, PANEL_HEIGHT, PanelAlignment::Bottom } });
 }

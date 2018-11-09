@@ -14,7 +14,7 @@ private:
 	static constexpr int TILE_WIDTH = SPECTRUM_WIDTH_PIXELS;
 	static constexpr int TILE_HEIGHT = SPECTRUM_HEIGHT_PIXELS - PANEL_HEIGHT;
 
-	static constexpr int START_ROOM_ADDR = 0x5082;
+	static constexpr int START_ROOM_ADDR = 0x798f;
 	static constexpr int CARTOGRAPHY_ROOM = 0x6c;
 
 	int m_start_room{ -1 };

@@ -64,7 +64,7 @@ void SpectrumGame::SetMap(const std::vector<MapRoom> &map)
 			if (td.pGame->IsActiveTile(td))
 			{
 				if (active && (address & 0x00ff) == 0x00fe)
-					SoundOut(value, td.frame_cycles + td.z80.cycles);
+					SoundOut(value, static_cast<int>(td.frame_cycles + td.z80.cycles));
 			}
 		};
 		tile.z80.int_data = [](void *context) -> zuint32 {

@@ -73,9 +73,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Z80-support.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="Z80.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -130,6 +127,9 @@
     </ClInclude>
     <ClInclude Include="Games\JetSetWillyII+.h">
       <Filter>Source Files\Games</Filter>
+    </ClInclude>
+    <ClInclude Include="Z80-support.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
