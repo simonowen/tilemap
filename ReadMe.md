@@ -25,9 +25,9 @@ TileMap is a playable game map, supporting selected ZX Spectrum games.
  Insert      | Show all rooms  
  Menu key    | Full speed  
 
-# Supported Games
+## Supported Games
 
-## Dynamite Dan, by Rod Bowkett. (c) 1985 Mirrorsoft Ltd
+### Dynamite Dan, by Rod Bowkett. (c) 1985 Mirrorsoft Ltd
 
  Key   | Action
  ----- | ------
@@ -40,7 +40,7 @@ Cheats: infinite lives and energy, no drowning
 
 ---
 
-## Dynamite Dan II, by Rod Bowkett. (c) 1986 Mirrorsoft Ltd
+### Dynamite Dan II, by Rod Bowkett. (c) 1986 Mirrorsoft Ltd
 
  Key | Action
  --- | ------
@@ -55,7 +55,7 @@ Special features: moving airship room
 
 ---
 
-## Jet Set Willy, by Matthew Smith. (c) 1984 Software Projects Ltd 
+### Jet Set Willy, by Matthew Smith. (c) 1984 Software Projects Ltd 
 
  Key         | Action
  ----------- | ------
@@ -70,7 +70,7 @@ Special features: seamless room change
 
 ---
 
-## Jet Set Willy II+, by Derrick P Rowson. (c) 1985 Software Projects Ltd
+### Jet Set Willy II+, by Derrick P Rowson. (c) 1985 Software Projects Ltd
 
  Key         | Action
  ----------- | ------
@@ -85,7 +85,7 @@ Special features: auto-updating Cartography Room
 
 ---
 
-## Starquake, by Stephen J Crow. (c) 1985 Bubble Bus Software
+### Starquake, by Stephen J Crow. (c) 1985 Bubble Bus Software
 
  Key   | Action
  ----- | ------
@@ -99,7 +99,7 @@ Cheats: infinite lives and resources, access security doors and Cheops
 
 - - -
 
-## Technician Ted, by Steve Marsden and David Cooke. (c) 1984 Hewson Consultants Ltd
+### Technician Ted, by Steve Marsden and David Cooke. (c) 1984 Hewson Consultants Ltd
 
  Key         | Action
  ----------- | ------
@@ -112,7 +112,7 @@ Special features: moving lift, map update after tasks (on next room change)
 
 ---
 
-## Spindizzy, by Phil Churchyard and Paul Shirley. (c) 1986 Electric Dreams Software
+### Spindizzy, by Phil Churchyard and Paul Shirley. (c) 1986 Electric Dreams Software
 
  Key        | Action
  ---------- | ------
@@ -147,4 +147,4 @@ Tip: use Delete/Insert to show only current room if obscured by neighbouring roo
 ---
 
 Simon Owen  
-http://simonowen.com
+https://simonowen.com
